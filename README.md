@@ -1,6 +1,8 @@
 # Obsidian ExamApp Gist Sync
 
-A dedicated Obsidian community plugin that provides seamless, two-way synchronization between your local Obsidian question pools (JSON format) and your [ExamApp](https://github.com/tafirnat/exam-app/) data hosted on GitHub Gists.
+A dedicated Obsidian community plugin that provides seamless, two-way synchronization between your local Obsidian question pools (JSON format) and your **[ExamApp](https://github.com/tafirnat/exam-app)** data hosted on GitHub Gists. 
+
+*(Note: This plugin is an extension designed specifically for the main [ExamApp Project](https://github.com/tafirnat/exam-app) to bridge your local knowledge base with the web application.)*
 
 ## 🚀 Features
 - **Zero External Dependencies**: Pure TypeScript plugin utilizing Obsidian's native `requestUrl`. No need for external Python scripts, CLI tools, or Node.js runtime in the background.
@@ -48,5 +50,10 @@ npm run dev
 ## 🤝 Contributing
 Contributions are always welcome. Feel free to open issues or submit Pull Requests for enhancements or bug fixes.
 
-## 📝 License
-This project is licensed under the MIT License.
+## 🤖 Development & Transparency
+This project was created and developed by the author leveraging advanced AI coding assistants (Antigravity & Claude). While continuous testing and optimization have been performed across all modules, minor edge-case inconsistencies or oversights might occasionally exist. Feedback, contributions, and issue reports are warmly welcomed!
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Developed with ❤️ by tafirnat
