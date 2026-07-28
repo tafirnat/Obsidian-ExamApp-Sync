@@ -74,17 +74,62 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 		} else {
 			// LOGGED OUT STATE
 			let inputToken = '';
+			let showInfo = false;
 
-			const loginSetting = new Setting(containerEl)
-				.setName('GitHub Personal Access Token (PAT)')
-				.setDesc('GitHub hesabınızdan alınan ("gist" yetkisine sahip) token. Oturum açıldığında senkronizasyon otomatik başlar.')
-				.addText(text => text
-					.setPlaceholder('ghp_...')
-					.setValue(this.plugin.settings.githubToken)
-					.onChange((val) => { inputToken = val.trim(); })
-				);
+			const loginSetting = new Setting(containerEl);
+
+			// Title with Info Icon
+			const nameEl = loginSetting.nameEl;
+			nameEl.innerHTML = `GitHub Personal Access Token (PAT) <span class="examapp-info-icon" style="cursor: pointer; color: var(--text-muted); font-size: 0.9em; margin-left: 6px; padding: 2px 6px; border-radius: 50%; background: var(--background-modifier-border);" title="PAT Nedir ve Nasıl Alınır?">ℹ️</span>`;
+
+			loginSetting.setDesc('GitHub hesabınızdan alınan ("gist" yetkisine sahip) token. Oturum açıldığında senkronizasyon otomatik başlar.');
+			
+			loginSetting.addText(text => text
+				.setPlaceholder('ghp_...')
+				.setValue(this.plugin.settings.githubToken)
+				.onChange((val) => { inputToken = val.trim(); })
+			);
 
 			loginSetting.controlEl.querySelector('input')?.setAttribute('type', 'password');
+
+			// PAT Info Container (Hidden by default, toggled via info icon)
+			const infoBox = containerEl.createDiv({ cls: 'examapp-pat-info-box' });
+			infoBox.style.display = 'none';
+			infoBox.style.padding = '14px 16px';
+			infoBox.style.borderRadius = '8px';
+			infoBox.style.backgroundColor = 'var(--background-secondary)';
+			infoBox.style.borderLeft = '4px solid var(--interactive-accent)';
+			infoBox.style.marginBottom = '16px';
+			infoBox.style.fontSize = '0.92em';
+			infoBox.style.lineHeight = '1.5';
+
+			infoBox.innerHTML = `
+				<div style="font-weight: bold; font-size: 1.05em; margin-bottom: 6px;">ℹ️ PAT (Personal Access Token) Nedir ve Nasıl Alınır?</div>
+				<p style="margin: 0 0 10px 0; color: var(--text-normal);">
+					<strong>Nedir?</strong> GitHub, güvenlik gerekçesiyle uygulamaların kullanıcı adı/şifre ile doğrudan giriş yapmasını yasaklar. 
+					PAT, ana şifrenizi vermeden sadece soru havuzlarınızı yedeklememiz için verilen <strong>güvenli bir erişim anahtarıdır</strong>.
+				</p>
+				<div style="font-weight: bold; margin-bottom: 4px;">🚀 3 Adımda Kolayca Alın:</div>
+				<ol style="margin: 0 0 12px 18px; padding: 0;">
+					<li style="margin-bottom: 4px;">
+						<a href="https://github.com/settings/tokens/new?scopes=gist&description=Obsidian%20ExamApp%20Sync" target="_blank" style="color: var(--text-accent); font-weight: bold; text-decoration: underline;">
+							🔗 Buraya Tıklayarak GitHub Token Oluşturma Sayfasını Açın
+						</a>
+						<em>(Gereken "gist" yetkisi otomatik seçili gelecektir)</em>
+					</li>
+					<li style="margin-bottom: 4px;">Sayfanın en altındaki <strong>"Generate token"</strong> butonuna basın.</li>
+					<li>Ekranda çıkan <code>ghp_...</code> ile başlayan kodu kopyalayıp yukarıdaki alana yapıştırın.</li>
+				</ol>
+			`;
+
+			// Toggle Info Box on Icon Click
+			const iconEl = nameEl.querySelector('.examapp-info-icon');
+			if (iconEl) {
+				iconEl.addEventListener('click', () => {
+					showInfo = !showInfo;
+					infoBox.style.display = showInfo ? 'block' : 'none';
+				});
+			}
 
 			loginSetting.addButton(button => {
 				button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum Aç`;
@@ -133,7 +178,7 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 
 						new Notice(`✅ Hoş geldiniz @${user.login}! Oturum açıldı. Senkronizasyon başlatılıyor...`);
 
-						// 3. AUTOMATIC IMMEDIATE SYNC (No extra action required from user!)
+						// 3. AUTOMATIC IMMEDIATE SYNC
 						await this.plugin.syncWithGist();
 
 						this.display();

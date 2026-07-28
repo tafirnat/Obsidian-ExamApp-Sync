@@ -253,12 +253,51 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
       );
     } else {
       let inputToken = "";
-      const loginSetting = new import_obsidian3.Setting(containerEl).setName("GitHub Personal Access Token (PAT)").setDesc('GitHub hesab\u0131n\u0131zdan al\u0131nan ("gist" yetkisine sahip) token. Oturum a\xE7\u0131ld\u0131\u011F\u0131nda senkronizasyon otomatik ba\u015Flar.').addText(
+      let showInfo = false;
+      const loginSetting = new import_obsidian3.Setting(containerEl);
+      const nameEl = loginSetting.nameEl;
+      nameEl.innerHTML = `GitHub Personal Access Token (PAT) <span class="examapp-info-icon" style="cursor: pointer; color: var(--text-muted); font-size: 0.9em; margin-left: 6px; padding: 2px 6px; border-radius: 50%; background: var(--background-modifier-border);" title="PAT Nedir ve Nas\u0131l Al\u0131n\u0131r?">\u2139\uFE0F</span>`;
+      loginSetting.setDesc('GitHub hesab\u0131n\u0131zdan al\u0131nan ("gist" yetkisine sahip) token. Oturum a\xE7\u0131ld\u0131\u011F\u0131nda senkronizasyon otomatik ba\u015Flar.');
+      loginSetting.addText(
         (text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubToken).onChange((val) => {
           inputToken = val.trim();
         })
       );
       (_a = loginSetting.controlEl.querySelector("input")) == null ? void 0 : _a.setAttribute("type", "password");
+      const infoBox = containerEl.createDiv({ cls: "examapp-pat-info-box" });
+      infoBox.style.display = "none";
+      infoBox.style.padding = "14px 16px";
+      infoBox.style.borderRadius = "8px";
+      infoBox.style.backgroundColor = "var(--background-secondary)";
+      infoBox.style.borderLeft = "4px solid var(--interactive-accent)";
+      infoBox.style.marginBottom = "16px";
+      infoBox.style.fontSize = "0.92em";
+      infoBox.style.lineHeight = "1.5";
+      infoBox.innerHTML = `
+				<div style="font-weight: bold; font-size: 1.05em; margin-bottom: 6px;">\u2139\uFE0F PAT (Personal Access Token) Nedir ve Nas\u0131l Al\u0131n\u0131r?</div>
+				<p style="margin: 0 0 10px 0; color: var(--text-normal);">
+					<strong>Nedir?</strong> GitHub, g\xFCvenlik gerek\xE7esiyle uygulamalar\u0131n kullan\u0131c\u0131 ad\u0131/\u015Fifre ile do\u011Frudan giri\u015F yapmas\u0131n\u0131 yasaklar. 
+					PAT, ana \u015Fifrenizi vermeden sadece soru havuzlar\u0131n\u0131z\u0131 yedeklememiz i\xE7in verilen <strong>g\xFCvenli bir eri\u015Fim anahtar\u0131d\u0131r</strong>.
+				</p>
+				<div style="font-weight: bold; margin-bottom: 4px;">\u{1F680} 3 Ad\u0131mda Kolayca Al\u0131n:</div>
+				<ol style="margin: 0 0 12px 18px; padding: 0;">
+					<li style="margin-bottom: 4px;">
+						<a href="https://github.com/settings/tokens/new?scopes=gist&description=Obsidian%20ExamApp%20Sync" target="_blank" style="color: var(--text-accent); font-weight: bold; text-decoration: underline;">
+							\u{1F517} Buraya T\u0131klayarak GitHub Token Olu\u015Fturma Sayfas\u0131n\u0131 A\xE7\u0131n
+						</a>
+						<em>(Gereken "gist" yetkisi otomatik se\xE7ili gelecektir)</em>
+					</li>
+					<li style="margin-bottom: 4px;">Sayfan\u0131n en alt\u0131ndaki <strong>"Generate token"</strong> butonuna bas\u0131n.</li>
+					<li>Ekranda \xE7\u0131kan <code>ghp_...</code> ile ba\u015Flayan kodu kopyalay\u0131p yukar\u0131daki alana yap\u0131\u015Ft\u0131r\u0131n.</li>
+				</ol>
+			`;
+      const iconEl = nameEl.querySelector(".examapp-info-icon");
+      if (iconEl) {
+        iconEl.addEventListener("click", () => {
+          showInfo = !showInfo;
+          infoBox.style.display = showInfo ? "block" : "none";
+        });
+      }
       loginSetting.addButton((button) => {
         button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum A\xE7`;
         button.buttonEl.style.backgroundColor = "#24292f";
