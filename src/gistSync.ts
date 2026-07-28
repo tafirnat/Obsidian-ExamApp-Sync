@@ -1,19 +1,40 @@
 import { requestUrl, RequestUrlParam, RequestUrlResponse } from 'obsidian';
 import { ExamAppGistSyncSettings } from './settings';
+import { findExamAppGist, createExamAppGist } from './githubApi';
 
 const GIST_FILENAME = 'exam_app_backup.json';
 const GITHUB_API_BASE = 'https://api.github.com';
 
-export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<any> {
-    if (!settings.githubToken || !settings.gistId) {
-        throw new Error('GitHub PAT veya Gist ID eksik.');
+async function ensureGistId(settings: ExamAppGistSyncSettings): Promise<string> {
+    if (!settings.githubToken) {
+        throw new Error('GitHub PAT token tanımlı değil. Lütfen eklenti ayarlarından oturum açın.');
     }
 
+    if (settings.gistId) {
+        return settings.gistId;
+    }
+
+    // Auto-discover
+    const detectedId = await findExamAppGist(settings.githubToken);
+    if (detectedId) {
+        settings.gistId = detectedId;
+        return detectedId;
+    }
+
+    // Auto-create
+    const createdId = await createExamAppGist(settings.githubToken);
+    settings.gistId = createdId;
+    return createdId;
+}
+
+export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<any> {
+    const gistId = await ensureGistId(settings);
+
     const reqParams: RequestUrlParam = {
-        url: `${GITHUB_API_BASE}/gists/${settings.gistId}`,
+        url: `${GITHUB_API_BASE}/gists/${gistId}`,
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${settings.githubToken}`,
+            'Authorization': `Bearer ${settings.githubToken.trim()}`,
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28'
         }
@@ -32,7 +53,7 @@ export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<
         return JSON.parse(file.content);
     }
     
-    // Gist found but no exam_app_backup.json inside
+    // Gist found but no exam_app_backup.json inside yet
     return {
         version: 2,
         sources: [],
@@ -45,15 +66,13 @@ export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<
 }
 
 export async function pushGistData(settings: ExamAppGistSyncSettings, payload: any): Promise<void> {
-    if (!settings.githubToken || !settings.gistId) {
-        throw new Error('GitHub PAT veya Gist ID eksik.');
-    }
+    const gistId = await ensureGistId(settings);
 
     const reqParams: RequestUrlParam = {
-        url: `${GITHUB_API_BASE}/gists/${settings.gistId}`,
+        url: `${GITHUB_API_BASE}/gists/${gistId}`,
         method: 'PATCH',
         headers: {
-            'Authorization': `Bearer ${settings.githubToken}`,
+            'Authorization': `Bearer ${settings.githubToken.trim()}`,
             'Accept': 'application/vnd.github+json',
             'Content-Type': 'application/json',
             'X-GitHub-Api-Version': '2022-11-28'

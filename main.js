@@ -25,16 +25,201 @@ __export(main_exports, {
   default: () => ExamAppGistSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/settings.ts
+var import_obsidian3 = require("obsidian");
+
+// src/githubApi.ts
 var import_obsidian = require("obsidian");
+var GIST_FILENAME = "exam_app_backup.json";
+var GITHUB_API_BASE = "https://api.github.com";
+async function fetchGitHubUser(token) {
+  if (!token || !token.trim()) {
+    throw new Error("GitHub PAT token bo\u015F olamaz.");
+  }
+  const reqParams = {
+    url: `${GITHUB_API_BASE}/user`,
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token.trim()}`,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  };
+  const response = await (0, import_obsidian.requestUrl)(reqParams);
+  if (response.status === 401) {
+    throw new Error("Ge\xE7ersiz GitHub PAT token veya s\xFCresi dolmu\u015F.");
+  } else if (response.status !== 200) {
+    throw new Error(`GitHub profil bilgisi al\u0131namad\u0131 (HTTP ${response.status})`);
+  }
+  const data = response.json;
+  return {
+    login: data.login,
+    avatarUrl: data.avatar_url,
+    name: data.name
+  };
+}
+async function findExamAppGist(token) {
+  var _a;
+  if (!token || !token.trim()) return null;
+  const reqParams = {
+    url: `${GITHUB_API_BASE}/gists?per_page=100`,
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token.trim()}`,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  };
+  const response = await (0, import_obsidian.requestUrl)(reqParams);
+  if (response.status !== 200) {
+    throw new Error(`Gist listesi al\u0131namad\u0131 (HTTP ${response.status})`);
+  }
+  const gists = response.json;
+  if (Array.isArray(gists)) {
+    for (const gist of gists) {
+      if (gist.files && (gist.files[GIST_FILENAME] || ((_a = gist.description) == null ? void 0 : _a.toLowerCase().includes("exam app")))) {
+        return gist.id;
+      }
+    }
+  }
+  return null;
+}
+async function createExamAppGist(token) {
+  if (!token || !token.trim()) {
+    throw new Error("Gist olu\u015Fturmak i\xE7in ge\xE7erli bir token gerekiyor.");
+  }
+  const initialPayload = {
+    version: 2,
+    sources: [],
+    deletedSourceIds: [],
+    stats: {},
+    totalStats: {},
+    recentTests: {},
+    settings: {}
+  };
+  const reqParams = {
+    url: `${GITHUB_API_BASE}/gists`,
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token.trim()}`,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    },
+    body: JSON.stringify({
+      description: "Exam App - User Study & Resource Data Sync (via Obsidian)",
+      public: false,
+      files: {
+        [GIST_FILENAME]: {
+          content: JSON.stringify(initialPayload, null, 2)
+        }
+      }
+    })
+  };
+  const response = await (0, import_obsidian.requestUrl)(reqParams);
+  if (response.status !== 201 && response.status !== 200) {
+    throw new Error(`ExamApp Gist olu\u015Fturulamad\u0131 (HTTP ${response.status})`);
+  }
+  return response.json.id;
+}
+
+// src/fileScanner.ts
+var import_obsidian2 = require("obsidian");
+
+// src/schemaValidator.ts
+var VALID_TYPES = /* @__PURE__ */ new Set(["single_choice", "multiple_choice", "true_false", "text_input", "text", "open_ended", "fill_in_the_blank", "flashcard"]);
+function validateExamSchema(data) {
+  var _a;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return { valid: false, isExamAppSource: false };
+  }
+  if (!data.id || typeof data.id !== "string") {
+    return { valid: false, isExamAppSource: false };
+  }
+  if (!Array.isArray(data.questions)) {
+    return { valid: false, isExamAppSource: false };
+  }
+  for (let i = 0; i < data.questions.length; i++) {
+    const q = data.questions[i];
+    if (q.id === void 0 || q.id === null) {
+      return { valid: false, isExamAppSource: true };
+    }
+    const text = ((_a = q.content) == null ? void 0 : _a.text) || q.text;
+    if (!text || String(text).trim() === "") {
+      return { valid: false, isExamAppSource: true };
+    }
+    if (!q.type || !VALID_TYPES.has(q.type)) {
+      return { valid: false, isExamAppSource: true };
+    }
+    if (q.type !== "flashcard" && (!q.answer || typeof q.answer !== "object")) {
+      return { valid: false, isExamAppSource: true };
+    }
+  }
+  return { valid: true, isExamAppSource: true };
+}
+
+// src/fileScanner.ts
+async function scanLocalSources(app, folderPath) {
+  const targetFolder = app.vault.getAbstractFileByPath(folderPath);
+  if (!targetFolder || !(targetFolder instanceof import_obsidian2.TFolder)) {
+    console.warn(`[ExamApp Sync] Hedef klas\xF6r bulunamad\u0131: ${folderPath}`);
+    return [];
+  }
+  const validSources = [];
+  for (const child of targetFolder.children) {
+    if (child instanceof import_obsidian2.TFile && child.extension === "json") {
+      try {
+        const content = await app.vault.read(child);
+        const data = JSON.parse(content);
+        const { valid, isExamAppSource } = validateExamSchema(data);
+        if (isExamAppSource && valid) {
+          validSources.push(data);
+        } else if (isExamAppSource && !valid) {
+          console.warn(`[ExamApp Sync] Dosya (${child.path}) ExamApp yap\u0131s\u0131na benziyor fakat \u015Fema hatas\u0131 i\xE7eriyor. Atlan\u0131yor.`);
+        }
+      } catch (err) {
+        console.error(`[ExamApp Sync] JSON okuma hatas\u0131 (${child.path}):`, err);
+      }
+    }
+  }
+  return validSources;
+}
+async function writeLocalSources(app, folderPath, sources) {
+  const targetFolder = app.vault.getAbstractFileByPath(folderPath);
+  if (!targetFolder || !(targetFolder instanceof import_obsidian2.TFolder)) {
+    try {
+      await app.vault.createFolder(folderPath);
+    } catch (e) {
+      console.error(`[ExamApp Sync] Hedef klas\xF6r olu\u015Fturulamad\u0131: ${folderPath}`, e);
+      return;
+    }
+  }
+  for (const source of sources) {
+    const safeName = (source.name || source.id || "Unknown_Source").replace(/[\\/:*?"<>|]/g, "_");
+    const filePath = `${folderPath}/${safeName}_${source.id.substring(0, 8)}.json`;
+    const content = JSON.stringify(source, null, 2);
+    const existingFile = app.vault.getAbstractFileByPath(filePath);
+    if (existingFile instanceof import_obsidian2.TFile) {
+      await app.vault.modify(existingFile, content);
+    } else {
+      await app.vault.create(filePath, content);
+    }
+  }
+}
+
+// src/settings.ts
 var DEFAULT_SETTINGS = {
   githubToken: "",
   gistId: "",
-  localFolderPath: "ExamApp Sync"
+  localFolderPath: "ExamApp Sync",
+  githubUsername: "",
+  autoSyncOnStartup: false,
+  showNotifications: true
 };
-var ExamAppGistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
+var GITHUB_SVG_ICON = `<svg height="16" width="16" viewBox="0 0 16 16" version="1.1" fill="currentColor" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>`;
+var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -43,46 +228,218 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian.PluginSettingTab {
     var _a;
     const { containerEl } = this;
     containerEl.empty();
-    (_a = new import_obsidian.Setting(containerEl).setName("GitHub Personal Access Token (PAT)").setDesc("Gist okuma/yazma yetkisine (gist scope) sahip bir token.").addText(
-      (text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubToken).onChange(async (value) => {
-        this.plugin.settings.githubToken = value;
+    containerEl.createEl("h2", { text: "ExamApp Gist Sync - Ayarlar" });
+    containerEl.createEl("h3", { text: "\u{1F511} GitHub Oturum Y\xF6netimi" });
+    if (this.plugin.settings.githubToken && this.plugin.settings.githubUsername) {
+      const accountCard = containerEl.createDiv({ cls: "examapp-account-card" });
+      accountCard.style.padding = "14px";
+      accountCard.style.borderRadius = "8px";
+      accountCard.style.backgroundColor = "var(--background-secondary)";
+      accountCard.style.border = "1px solid var(--background-modifier-border)";
+      accountCard.style.marginBottom = "18px";
+      const statusEl = accountCard.createEl("div");
+      statusEl.innerHTML = `${GITHUB_SVG_ICON}<strong>Ba\u011Fl\u0131 Hesap:</strong> @${this.plugin.settings.githubUsername} <span style="color: var(--text-success); font-weight: bold; margin-left: 8px;">\u25CF Aktif</span>`;
+      statusEl.style.fontSize = "1.05em";
+      statusEl.style.marginBottom = "12px";
+      new import_obsidian3.Setting(accountCard).setName("Oturumu Kapat").setDesc("GitHub ba\u011Flant\u0131s\u0131n\u0131 ve kaydedilen Gist kimli\u011Fini kald\u0131r\u0131r.").addButton(
+        (button) => button.setButtonText("Oturumu Kapat").setWarning().onClick(async () => {
+          this.plugin.settings.githubToken = "";
+          this.plugin.settings.githubUsername = "";
+          this.plugin.settings.gistId = "";
+          await this.plugin.saveSettings();
+          new import_obsidian3.Notice("\u{1F512} GitHub oturumu kapat\u0131ld\u0131.");
+          this.display();
+        })
+      );
+    } else {
+      let inputToken = "";
+      const loginSetting = new import_obsidian3.Setting(containerEl).setName("GitHub Personal Access Token (PAT)").setDesc('GitHub hesab\u0131n\u0131zdan al\u0131nan ("gist" yetkisine sahip) token. Oturum a\xE7\u0131ld\u0131\u011F\u0131nda senkronizasyon otomatik ba\u015Flar.').addText(
+        (text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubToken).onChange((val) => {
+          inputToken = val.trim();
+        })
+      );
+      (_a = loginSetting.controlEl.querySelector("input")) == null ? void 0 : _a.setAttribute("type", "password");
+      loginSetting.addButton((button) => {
+        button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum A\xE7`;
+        button.buttonEl.style.backgroundColor = "#24292f";
+        button.buttonEl.style.color = "#ffffff";
+        button.buttonEl.style.fontWeight = "600";
+        button.buttonEl.style.padding = "6px 14px";
+        button.buttonEl.style.borderRadius = "6px";
+        button.buttonEl.style.border = "none";
+        button.buttonEl.style.cursor = "pointer";
+        button.buttonEl.style.display = "inline-flex";
+        button.buttonEl.style.alignItems = "center";
+        button.buttonEl.style.transition = "background-color 0.2s ease";
+        button.buttonEl.addEventListener("mouseenter", () => {
+          button.buttonEl.style.backgroundColor = "#333942";
+        });
+        button.buttonEl.addEventListener("mouseleave", () => {
+          button.buttonEl.style.backgroundColor = "#24292f";
+        });
+        button.onClick(async () => {
+          const tokenToUse = inputToken || this.plugin.settings.githubToken;
+          if (!tokenToUse) {
+            new import_obsidian3.Notice("\u26A0\uFE0F L\xFCtfen bir GitHub PAT token girin.");
+            return;
+          }
+          button.setDisabled(true);
+          button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} Oturum A\xE7\u0131l\u0131yor...`;
+          try {
+            const user = await fetchGitHubUser(tokenToUse);
+            this.plugin.settings.githubToken = tokenToUse;
+            this.plugin.settings.githubUsername = user.login;
+            let detectedGistId = await findExamAppGist(tokenToUse);
+            if (!detectedGistId) {
+              detectedGistId = await createExamAppGist(tokenToUse);
+            }
+            this.plugin.settings.gistId = detectedGistId;
+            await this.plugin.saveSettings();
+            new import_obsidian3.Notice(`\u2705 Ho\u015F geldiniz @${user.login}! Oturum a\xE7\u0131ld\u0131. Senkronizasyon ba\u015Flat\u0131l\u0131yor...`);
+            await this.plugin.syncWithGist();
+            this.display();
+          } catch (err) {
+            console.error("[ExamApp Login Error]", err);
+            new import_obsidian3.Notice(`\u274C Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
+          } finally {
+            button.setDisabled(false);
+            button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum A\xE7`;
+          }
+        });
+      });
+    }
+    if (this.plugin.settings.githubToken) {
+      containerEl.createEl("h3", { text: "\u2601\uFE0F Gist Durumu & Otomatik Tespit" });
+      const gistCard = containerEl.createDiv();
+      gistCard.style.padding = "12px";
+      gistCard.style.borderRadius = "6px";
+      gistCard.style.backgroundColor = "var(--background-secondary)";
+      gistCard.style.marginBottom = "18px";
+      if (this.plugin.settings.gistId) {
+        const infoEl = gistCard.createEl("div");
+        infoEl.innerHTML = `<strong>\u{1F7E2} Ba\u011Fl\u0131 Gist ID:</strong> <code>${this.plugin.settings.gistId}</code> <span style="color: var(--text-muted); font-size: 0.9em;">(Otomatik Ba\u011Fland\u0131)</span>`;
+        infoEl.style.marginBottom = "10px";
+      } else {
+        const infoEl = gistCard.createEl("div");
+        infoEl.innerHTML = `<strong>\u26A0\uFE0F Hen\xFCz bir ExamApp Gist ba\u011Fl\u0131 de\u011Fil.</strong>`;
+        infoEl.style.color = "var(--text-accent)";
+        infoEl.style.marginBottom = "10px";
+      }
+      new import_obsidian3.Setting(gistCard).setName("Gist Otomatik Yeniden Tara / Olu\u015Ftur").setDesc("Hesab\u0131n\u0131zdaki ExamApp Gist varl\u0131\u011F\u0131n\u0131 tarar veya yoksa otomatik olu\u015Fturur.").addButton(
+        (btn) => btn.setButtonText("Yeniden Tara").onClick(async () => {
+          try {
+            const id = await findExamAppGist(this.plugin.settings.githubToken);
+            if (id) {
+              this.plugin.settings.gistId = id;
+              await this.plugin.saveSettings();
+              new import_obsidian3.Notice("\u2705 ExamApp Gist ba\u015Far\u0131yla tespit edildi!");
+              this.display();
+            } else {
+              new import_obsidian3.Notice("\u26A0\uFE0F Hesab\u0131n\u0131zda hen\xFCz ExamApp Gist bulunamad\u0131.");
+            }
+          } catch (e) {
+            new import_obsidian3.Notice(`\u274C Taramada hata: ${e.message}`);
+          }
+        })
+      ).addButton(
+        (btn) => btn.setButtonText("Yeni Gist Olu\u015Ftur").setCta().onClick(async () => {
+          try {
+            const newId = await createExamAppGist(this.plugin.settings.githubToken);
+            this.plugin.settings.gistId = newId;
+            await this.plugin.saveSettings();
+            new import_obsidian3.Notice("\u{1F389} Yeni ExamApp Gist ba\u015Far\u0131yla olu\u015Fturuldu ve ba\u011Fland\u0131!");
+            this.display();
+          } catch (e) {
+            new import_obsidian3.Notice(`\u274C Gist olu\u015Fturma hatas\u0131: ${e.message}`);
+          }
+        })
+      );
+      const detailsEl = containerEl.createEl("details");
+      detailsEl.style.marginBottom = "18px";
+      detailsEl.style.cursor = "pointer";
+      const summaryEl = detailsEl.createEl("summary", { text: "\u2699\uFE0F Geli\u015Fmi\u015F: Manuel Gist ID D\xFCzenleme" });
+      summaryEl.style.color = "var(--text-muted)";
+      summaryEl.style.fontWeight = "bold";
+      new import_obsidian3.Setting(detailsEl).setName("Manuel Gist ID (\xD6zel)").setDesc("Gist ID otomatik tespit edilir. Yaln\u0131zca \xF6zel bir Gist ID zorlamak istiyorsan\u0131z de\u011Fi\u015Ftirin.").addText(
+        (text) => text.setPlaceholder("e.g. 1a2b3c4d5e6f7g8h9i0j").setValue(this.plugin.settings.gistId).onChange(async (val) => {
+          this.plugin.settings.gistId = val.trim();
+          await this.plugin.saveSettings();
+        })
+      );
+    }
+    containerEl.createEl("h3", { text: "\u{1F4C2} Vault Senkronizasyon Klas\xF6r\xFC" });
+    new import_obsidian3.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc('Senkronize edilecek JSON dosyalar\u0131n\u0131n bulundu\u011Fu Vault i\xE7i klas\xF6r. (Varsay\u0131lan: "ExamApp Sync")').addText(
+      (text) => text.setPlaceholder("ExamApp Sync").setValue(this.plugin.settings.localFolderPath).onChange(async (val) => {
+        this.plugin.settings.localFolderPath = val.trim() || "ExamApp Sync";
         await this.plugin.saveSettings();
       })
-    ).controlEl.querySelector("input")) == null ? void 0 : _a.setAttribute("type", "password");
-    new import_obsidian.Setting(containerEl).setName("Gist ID").setDesc("ExamApp verilerinin tutuldu\u011Fu hedef Gist'in ID'si.").addText((text) => text.setPlaceholder("e.g. 1a2b3c4d5e6f7g8h9i0j").setValue(this.plugin.settings.gistId).onChange(async (value) => {
-      this.plugin.settings.gistId = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian.Setting(containerEl).setName("Local Folder Path").setDesc('Senkronize edilecek JSON dosyalar\u0131n\u0131n bulundu\u011Fu Vault i\xE7i klas\xF6r (\xF6rn. "ExamApp Sync"). Bu klas\xF6r alt\u0131ndaki uyumlu JSON dosyalar\u0131 taran\u0131r.').addText((text) => text.setPlaceholder("ExamApp Sync").setValue(this.plugin.settings.localFolderPath).onChange(async (value) => {
-      this.plugin.settings.localFolderPath = value;
-      await this.plugin.saveSettings();
-    }));
+    );
+    const schemaInfoBox = containerEl.createDiv();
+    schemaInfoBox.style.padding = "10px 14px";
+    schemaInfoBox.style.borderRadius = "6px";
+    schemaInfoBox.style.backgroundColor = "var(--background-secondary)";
+    schemaInfoBox.style.borderLeft = "4px solid var(--interactive-accent)";
+    schemaInfoBox.style.marginBottom = "12px";
+    schemaInfoBox.innerHTML = `\u2139\uFE0F <strong>\u015Eema G\xFCvenlik Filtresi:</strong> Bu klas\xF6r i\xE7erisindeki dosyalar taran\u0131rken sadece ge\xE7erli ExamApp soru \u015Femas\u0131na (<code>{ id, questions: [...] }</code>) sahip <code>.json</code> dosyalar\u0131 i\u015Flenir. Di\u011Fer uyumsuz JSON veya not dosyalar\u0131 g\xFCvenle atlan\u0131r.`;
+    new import_obsidian3.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton(
+      (btn) => btn.setButtonText("\u015Eimdi Tara ve Do\u011Frula").onClick(async () => {
+        const sources = await scanLocalSources(this.app, this.plugin.settings.localFolderPath);
+        new import_obsidian3.Notice(`\u{1F50D} Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
+      })
+    );
+    containerEl.createEl("h3", { text: "\u2699\uFE0F Genel Otomasyon Ayarlar\u0131" });
+    new import_obsidian3.Setting(containerEl).setName("Obsidian A\xE7\u0131l\u0131\u015F\u0131nda Otomatik Senkronize Et").setDesc("Obsidian ba\u015Flat\u0131ld\u0131\u011F\u0131nda Gist senkronizasyonunu arka planda otomatik olarak tetikler.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.autoSyncOnStartup).onChange(async (val) => {
+        this.plugin.settings.autoSyncOnStartup = val;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian3.Setting(containerEl).setName("Senkronizasyon Bildirimlerini G\xF6ster").setDesc("Senkronizasyon ba\u015Flad\u0131\u011F\u0131nda ve tamamland\u0131\u011F\u0131nda ekranda bilgi bildirimleri (toast Notice) g\xF6sterir.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.showNotifications).onChange(async (val) => {
+        this.plugin.settings.showNotifications = val;
+        await this.plugin.saveSettings();
+      })
+    );
   }
 };
 
 // src/gistSync.ts
-var import_obsidian2 = require("obsidian");
-var GIST_FILENAME = "exam_app_backup.json";
-var GITHUB_API_BASE = "https://api.github.com";
-async function fetchGistData(settings) {
-  if (!settings.githubToken || !settings.gistId) {
-    throw new Error("GitHub PAT veya Gist ID eksik.");
+var import_obsidian4 = require("obsidian");
+var GIST_FILENAME2 = "exam_app_backup.json";
+var GITHUB_API_BASE2 = "https://api.github.com";
+async function ensureGistId(settings) {
+  if (!settings.githubToken) {
+    throw new Error("GitHub PAT token tan\u0131ml\u0131 de\u011Fil. L\xFCtfen eklenti ayarlar\u0131ndan oturum a\xE7\u0131n.");
   }
+  if (settings.gistId) {
+    return settings.gistId;
+  }
+  const detectedId = await findExamAppGist(settings.githubToken);
+  if (detectedId) {
+    settings.gistId = detectedId;
+    return detectedId;
+  }
+  const createdId = await createExamAppGist(settings.githubToken);
+  settings.gistId = createdId;
+  return createdId;
+}
+async function fetchGistData(settings) {
+  const gistId = await ensureGistId(settings);
   const reqParams = {
-    url: `${GITHUB_API_BASE}/gists/${settings.gistId}`,
+    url: `${GITHUB_API_BASE2}/gists/${gistId}`,
     method: "GET",
     headers: {
-      "Authorization": `Bearer ${settings.githubToken}`,
+      "Authorization": `Bearer ${settings.githubToken.trim()}`,
       "Accept": "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28"
     }
   };
-  const response = await (0, import_obsidian2.requestUrl)(reqParams);
+  const response = await (0, import_obsidian4.requestUrl)(reqParams);
   if (response.status !== 200) {
     throw new Error(`GitHub Gist okuma hatas\u0131: ${response.status}`);
   }
   const gist = response.json;
-  const file = gist.files && gist.files[GIST_FILENAME];
+  const file = gist.files && gist.files[GIST_FILENAME2];
   if (file && file.content) {
     return JSON.parse(file.content);
   }
@@ -97,14 +454,12 @@ async function fetchGistData(settings) {
   };
 }
 async function pushGistData(settings, payload) {
-  if (!settings.githubToken || !settings.gistId) {
-    throw new Error("GitHub PAT veya Gist ID eksik.");
-  }
+  const gistId = await ensureGistId(settings);
   const reqParams = {
-    url: `${GITHUB_API_BASE}/gists/${settings.gistId}`,
+    url: `${GITHUB_API_BASE2}/gists/${gistId}`,
     method: "PATCH",
     headers: {
-      "Authorization": `Bearer ${settings.githubToken}`,
+      "Authorization": `Bearer ${settings.githubToken.trim()}`,
       "Accept": "application/vnd.github+json",
       "Content-Type": "application/json",
       "X-GitHub-Api-Version": "2022-11-28"
@@ -112,13 +467,13 @@ async function pushGistData(settings, payload) {
     body: JSON.stringify({
       description: "Exam App - User Study & Resource Data Sync (via Obsidian)",
       files: {
-        [GIST_FILENAME]: {
+        [GIST_FILENAME2]: {
           content: JSON.stringify(payload, null, 2)
         }
       }
     })
   };
-  const response = await (0, import_obsidian2.requestUrl)(reqParams);
+  const response = await (0, import_obsidian4.requestUrl)(reqParams);
   if (response.status !== 200) {
     throw new Error(`GitHub Gist yazma hatas\u0131: ${response.status}`);
   }
@@ -169,96 +524,12 @@ function mergeSyncData(localSources, remotePayload) {
   };
 }
 
-// src/fileScanner.ts
-var import_obsidian3 = require("obsidian");
-
-// src/schemaValidator.ts
-var VALID_TYPES = /* @__PURE__ */ new Set(["single_choice", "multiple_choice", "true_false", "text_input", "text", "open_ended", "fill_in_the_blank", "flashcard"]);
-function validateExamSchema(data) {
-  var _a;
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return { valid: false, isExamAppSource: false };
-  }
-  if (!data.id || typeof data.id !== "string") {
-    return { valid: false, isExamAppSource: false };
-  }
-  if (!Array.isArray(data.questions)) {
-    return { valid: false, isExamAppSource: false };
-  }
-  for (let i = 0; i < data.questions.length; i++) {
-    const q = data.questions[i];
-    if (q.id === void 0 || q.id === null) {
-      return { valid: false, isExamAppSource: true };
-    }
-    const text = ((_a = q.content) == null ? void 0 : _a.text) || q.text;
-    if (!text || String(text).trim() === "") {
-      return { valid: false, isExamAppSource: true };
-    }
-    if (!q.type || !VALID_TYPES.has(q.type)) {
-      return { valid: false, isExamAppSource: true };
-    }
-    if (q.type !== "flashcard" && (!q.answer || typeof q.answer !== "object")) {
-      return { valid: false, isExamAppSource: true };
-    }
-  }
-  return { valid: true, isExamAppSource: true };
-}
-
-// src/fileScanner.ts
-async function scanLocalSources(app, folderPath) {
-  const targetFolder = app.vault.getAbstractFileByPath(folderPath);
-  if (!targetFolder || !(targetFolder instanceof import_obsidian3.TFolder)) {
-    console.warn(`[ExamApp Sync] Hedef klas\xF6r bulunamad\u0131: ${folderPath}`);
-    return [];
-  }
-  const validSources = [];
-  for (const child of targetFolder.children) {
-    if (child instanceof import_obsidian3.TFile && child.extension === "json") {
-      try {
-        const content = await app.vault.read(child);
-        const data = JSON.parse(content);
-        const { valid, isExamAppSource } = validateExamSchema(data);
-        if (isExamAppSource && valid) {
-          validSources.push(data);
-        } else if (isExamAppSource && !valid) {
-          console.warn(`[ExamApp Sync] Dosya (${child.path}) ExamApp yap\u0131s\u0131na benziyor fakat \u015Fema hatas\u0131 i\xE7eriyor. Atlan\u0131yor.`);
-        }
-      } catch (err) {
-        console.error(`[ExamApp Sync] JSON okuma hatas\u0131 (${child.path}):`, err);
-      }
-    }
-  }
-  return validSources;
-}
-async function writeLocalSources(app, folderPath, sources) {
-  const targetFolder = app.vault.getAbstractFileByPath(folderPath);
-  if (!targetFolder || !(targetFolder instanceof import_obsidian3.TFolder)) {
-    try {
-      await app.vault.createFolder(folderPath);
-    } catch (e) {
-      console.error(`[ExamApp Sync] Hedef klas\xF6r olu\u015Fturulamad\u0131: ${folderPath}`, e);
-      return;
-    }
-  }
-  for (const source of sources) {
-    const safeName = (source.name || source.id || "Unknown_Source").replace(/[\\/:*?"<>|]/g, "_");
-    const filePath = `${folderPath}/${safeName}_${source.id.substring(0, 8)}.json`;
-    const content = JSON.stringify(source, null, 2);
-    const existingFile = app.vault.getAbstractFileByPath(filePath);
-    if (existingFile instanceof import_obsidian3.TFile) {
-      await app.vault.modify(existingFile, content);
-    } else {
-      await app.vault.create(filePath, content);
-    }
-  }
-}
-
 // src/main.ts
-var ExamAppGistSyncPlugin = class extends import_obsidian4.Plugin {
+var ExamAppGistSyncPlugin = class extends import_obsidian5.Plugin {
   async onload() {
     await this.loadSettings();
     this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
-    const ribbonIconEl = this.addRibbonIcon("refresh-cw", "ExamApp Sync", async (evt) => {
+    const ribbonIconEl = this.addRibbonIcon("refresh-cw", "ExamApp Sync", async () => {
       await this.syncWithGist();
     });
     ribbonIconEl.addClass("examapp-sync-ribbon-class");
@@ -269,25 +540,39 @@ var ExamAppGistSyncPlugin = class extends import_obsidian4.Plugin {
         await this.syncWithGist();
       }
     });
+    if (this.settings.autoSyncOnStartup && this.settings.githubToken) {
+      this.app.workspace.onLayoutReady(async () => {
+        await this.syncWithGist(true);
+      });
+    }
   }
   onunload() {
   }
-  async syncWithGist() {
-    if (!this.settings.githubToken || !this.settings.gistId) {
-      new import_obsidian4.Notice("\u274C ExamApp Sync: GitHub PAT veya Gist ID eksik. Ayarlar\u0131 kontrol edin.");
+  async syncWithGist(isAutoSync = false) {
+    if (!this.settings.githubToken) {
+      if (!isAutoSync && this.settings.showNotifications) {
+        new import_obsidian5.Notice("\u274C ExamApp Sync: L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan GitHub hesab\u0131n\u0131zla oturum a\xE7\u0131n.");
+      }
       return;
     }
-    new import_obsidian4.Notice("\u23F3 ExamApp: Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
+    if (this.settings.showNotifications) {
+      new import_obsidian5.Notice("\u23F3 ExamApp: Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
+    }
     try {
       const remoteData = await fetchGistData(this.settings);
+      await this.saveSettings();
       const localSources = await scanLocalSources(this.app, this.settings.localFolderPath);
       const mergedData = mergeSyncData(localSources, remoteData);
       await pushGistData(this.settings, mergedData);
       await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
-      new import_obsidian4.Notice("\u2705 ExamApp: Senkronizasyon Ba\u015Far\u0131l\u0131!");
+      if (this.settings.showNotifications) {
+        new import_obsidian5.Notice(`\u2705 ExamApp: Senkronizasyon Ba\u015Far\u0131l\u0131! (${mergedData.sources.length} havuz senkronize edildi)`);
+      }
     } catch (error) {
       console.error("[ExamApp Sync] Hata:", error);
-      new import_obsidian4.Notice(`\u274C ExamApp: Senkronizasyon hatas\u0131! ${error.message}`);
+      if (this.settings.showNotifications) {
+        new import_obsidian5.Notice(`\u274C ExamApp: Senkronizasyon hatas\u0131! ${error.message}`);
+      }
     }
   }
   async loadSettings() {

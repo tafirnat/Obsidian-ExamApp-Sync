@@ -14,10 +14,9 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 		this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
 
 		// Ribbon Icon
-		const ribbonIconEl = this.addRibbonIcon('refresh-cw', 'ExamApp Sync', async (evt: MouseEvent) => {
+		const ribbonIconEl = this.addRibbonIcon('refresh-cw', 'ExamApp Sync', async () => {
 			await this.syncWithGist();
 		});
-		
 		ribbonIconEl.addClass('examapp-sync-ribbon-class');
 
 		// Command to sync via Command Palette
@@ -28,40 +27,58 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 				await this.syncWithGist();
 			}
 		});
+
+		// Auto-sync on startup if enabled
+		if (this.settings.autoSyncOnStartup && this.settings.githubToken) {
+			this.app.workspace.onLayoutReady(async () => {
+				await this.syncWithGist(true);
+			});
+		}
 	}
 
 	onunload() {
-		// Nothing specific to unload
+		// Clean up
 	}
 
-	async syncWithGist() {
-		if (!this.settings.githubToken || !this.settings.gistId) {
-			new Notice('❌ ExamApp Sync: GitHub PAT veya Gist ID eksik. Ayarları kontrol edin.');
+	async syncWithGist(isAutoSync: boolean = false) {
+		if (!this.settings.githubToken) {
+			if (!isAutoSync && this.settings.showNotifications) {
+				new Notice('❌ ExamApp Sync: Lütfen önce eklenti ayarlarından GitHub hesabınızla oturum açın.');
+			}
 			return;
 		}
 
-		new Notice('⏳ ExamApp: Senkronizasyon başlatılıyor...');
+		if (this.settings.showNotifications) {
+			new Notice('⏳ ExamApp: Senkronizasyon başlatılıyor...');
+		}
 
 		try {
-			// 1. Gist verisini çek
+			// 1. Fetch remote Gist data (auto-detects/creates Gist ID if needed)
 			const remoteData = await fetchGistData(this.settings);
 			
-			// 2. Yerel JSON'ları oku
+			// Save settings if gistId was auto-resolved
+			await this.saveSettings();
+
+			// 2. Scan local JSON files in the specified folder
 			const localSources = await scanLocalSources(this.app, this.settings.localFolderPath);
-			
-			// 3. Güçlü zayıfı ezer mantığı ile birleştir
+
+			// 3. Merge data using ExamApp logic ("Güçlü Zayıfı Ezer")
 			const mergedData = mergeSyncData(localSources, remoteData);
-			
-			// 4. Gist'e gönder
+
+			// 4. Push merged payload back to Gist
 			await pushGistData(this.settings, mergedData);
-			
-			// 5. Yereli Gist'teki son duruma göre eşitle (isteğe bağlı ama tavsiye edilen)
+
+			// 5. Update local JSON files to reflect the final merged state
 			await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
 
-			new Notice('✅ ExamApp: Senkronizasyon Başarılı!');
+			if (this.settings.showNotifications) {
+				new Notice(`✅ ExamApp: Senkronizasyon Başarılı! (${mergedData.sources.length} havuz senkronize edildi)`);
+			}
 		} catch (error: any) {
 			console.error('[ExamApp Sync] Hata:', error);
-			new Notice(`❌ ExamApp: Senkronizasyon hatası! ${error.message}`);
+			if (this.settings.showNotifications) {
+				new Notice(`❌ ExamApp: Senkronizasyon hatası! ${error.message}`);
+			}
 		}
 	}
 
