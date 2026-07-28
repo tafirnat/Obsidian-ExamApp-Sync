@@ -218,7 +218,18 @@ var DEFAULT_SETTINGS = {
   autoSyncOnStartup: false,
   showNotifications: true
 };
-var GITHUB_SVG_ICON = `<svg height="16" width="16" viewBox="0 0 16 16" version="1.1" fill="currentColor" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>`;
+var ICONS = {
+  github: `<svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>`,
+  key: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><path d="M21 2l-2 2m-1.5 1.5l-3 3m-5 5a7 7 0 1 1 3-3l7-7v3h3v3h-3z"/></svg>`,
+  cloud: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>`,
+  folder: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+  sliders: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>`,
+  info: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="examapp-info-icon" style="vertical-align: middle; margin-left: 6px; cursor: pointer; opacity: 0.6; transition: opacity 0.2s;" title="PAT Hakk\u0131nda Detayl\u0131 Bilgi"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+  checkBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+  alertBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+  externalLink: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+  shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`
+};
 var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
@@ -229,7 +240,8 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "ExamApp Gist Sync - Ayarlar" });
-    containerEl.createEl("h3", { text: "\u{1F511} GitHub Oturum Y\xF6netimi" });
+    const authHeader = containerEl.createEl("h3");
+    authHeader.innerHTML = `${ICONS.key}GitHub Oturum Y\xF6netimi`;
     if (this.plugin.settings.githubToken && this.plugin.settings.githubUsername) {
       const accountCard = containerEl.createDiv({ cls: "examapp-account-card" });
       accountCard.style.padding = "14px";
@@ -238,7 +250,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
       accountCard.style.border = "1px solid var(--background-modifier-border)";
       accountCard.style.marginBottom = "18px";
       const statusEl = accountCard.createEl("div");
-      statusEl.innerHTML = `${GITHUB_SVG_ICON}<strong>Ba\u011Fl\u0131 Hesap:</strong> @${this.plugin.settings.githubUsername} <span style="color: var(--text-success); font-weight: bold; margin-left: 8px;">\u25CF Aktif</span>`;
+      statusEl.innerHTML = `${ICONS.github}<strong>Ba\u011Fl\u0131 Hesap:</strong> @${this.plugin.settings.githubUsername} <span style="color: var(--text-success); font-weight: bold; margin-left: 8px;">${ICONS.checkBadge}Aktif</span>`;
       statusEl.style.fontSize = "1.05em";
       statusEl.style.marginBottom = "12px";
       new import_obsidian3.Setting(accountCard).setName("Oturumu Kapat").setDesc("GitHub ba\u011Flant\u0131s\u0131n\u0131 ve kaydedilen Gist kimli\u011Fini kald\u0131r\u0131r.").addButton(
@@ -247,7 +259,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
           this.plugin.settings.githubUsername = "";
           this.plugin.settings.gistId = "";
           await this.plugin.saveSettings();
-          new import_obsidian3.Notice("\u{1F512} GitHub oturumu kapat\u0131ld\u0131.");
+          new import_obsidian3.Notice("GitHub oturumu kapat\u0131ld\u0131.");
           this.display();
         })
       );
@@ -256,7 +268,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
       let showInfo = false;
       const loginSetting = new import_obsidian3.Setting(containerEl);
       const nameEl = loginSetting.nameEl;
-      nameEl.innerHTML = `GitHub Personal Access Token (PAT) <span class="examapp-info-icon" style="cursor: pointer; color: var(--text-muted); font-size: 0.9em; margin-left: 6px; padding: 2px 6px; border-radius: 50%; background: var(--background-modifier-border);" title="PAT Nedir ve Nas\u0131l Al\u0131n\u0131r?">\u2139\uFE0F</span>`;
+      nameEl.innerHTML = `GitHub Personal Access Token (PAT) ${ICONS.info}`;
       loginSetting.setDesc('GitHub hesab\u0131n\u0131zdan al\u0131nan ("gist" yetkisine sahip) token. Oturum a\xE7\u0131ld\u0131\u011F\u0131nda senkronizasyon otomatik ba\u015Flar.');
       loginSetting.addText(
         (text) => text.setPlaceholder("ghp_...").setValue(this.plugin.settings.githubToken).onChange((val) => {
@@ -274,18 +286,18 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
       infoBox.style.fontSize = "0.92em";
       infoBox.style.lineHeight = "1.5";
       infoBox.innerHTML = `
-				<div style="font-weight: bold; font-size: 1.05em; margin-bottom: 6px;">\u2139\uFE0F PAT (Personal Access Token) Nedir ve Nas\u0131l Al\u0131n\u0131r?</div>
+				<div style="font-weight: bold; font-size: 1.05em; margin-bottom: 6px;">PAT (Personal Access Token) Nedir ve Nas\u0131l Al\u0131n\u0131r?</div>
 				<p style="margin: 0 0 10px 0; color: var(--text-normal);">
-					<strong>Nedir?</strong> GitHub, g\xFCvenlik gerek\xE7esiyle uygulamalar\u0131n kullan\u0131c\u0131 ad\u0131/\u015Fifre ile do\u011Frudan giri\u015F yapmas\u0131n\u0131 yasaklar. 
+					<strong>Nedir?</strong> GitHub, g\xFCvenlik gerek\xE7esiyle \xFC\xE7\xFCnc\xFC taraf uygulamalar\u0131n kullan\u0131c\u0131 ad\u0131/\u015Fifre ile do\u011Frudan giri\u015F yapmas\u0131n\u0131 yasaklar. 
 					PAT, ana \u015Fifrenizi vermeden sadece soru havuzlar\u0131n\u0131z\u0131 yedeklememiz i\xE7in verilen <strong>g\xFCvenli bir eri\u015Fim anahtar\u0131d\u0131r</strong>.
 				</p>
-				<div style="font-weight: bold; margin-bottom: 4px;">\u{1F680} 3 Ad\u0131mda Kolayca Al\u0131n:</div>
+				<div style="font-weight: bold; margin-bottom: 4px;">3 Ad\u0131mda Kolayca Al\u0131n:</div>
 				<ol style="margin: 0 0 12px 18px; padding: 0;">
-					<li style="margin-bottom: 4px;">
+					<li style="margin-bottom: 6px;">
 						<a href="https://github.com/settings/tokens/new?scopes=gist&description=Obsidian%20ExamApp%20Sync" target="_blank" style="color: var(--text-accent); font-weight: bold; text-decoration: underline;">
-							\u{1F517} Buraya T\u0131klayarak GitHub Token Olu\u015Fturma Sayfas\u0131n\u0131 A\xE7\u0131n
+							GitHub Token Olu\u015Fturma Sayfas\u0131n\u0131 A\xE7\u0131n ${ICONS.externalLink}
 						</a>
-						<em>(Gereken "gist" yetkisi otomatik se\xE7ili gelecektir)</em>
+						<br><span style="color: var(--text-muted); font-size: 0.9em;">(Gereken "gist" yetkisi otomatik se\xE7ili gelecektir)</span>
 					</li>
 					<li style="margin-bottom: 4px;">Sayfan\u0131n en alt\u0131ndaki <strong>"Generate token"</strong> butonuna bas\u0131n.</li>
 					<li>Ekranda \xE7\u0131kan <code>ghp_...</code> ile ba\u015Flayan kodu kopyalay\u0131p yukar\u0131daki alana yap\u0131\u015Ft\u0131r\u0131n.</li>
@@ -297,9 +309,15 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
           showInfo = !showInfo;
           infoBox.style.display = showInfo ? "block" : "none";
         });
+        iconEl.addEventListener("mouseenter", () => {
+          iconEl.style.opacity = "1";
+        });
+        iconEl.addEventListener("mouseleave", () => {
+          iconEl.style.opacity = "0.6";
+        });
       }
       loginSetting.addButton((button) => {
-        button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum A\xE7`;
+        button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum A\xE7`;
         button.buttonEl.style.backgroundColor = "#24292f";
         button.buttonEl.style.color = "#ffffff";
         button.buttonEl.style.fontWeight = "600";
@@ -319,11 +337,11 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
         button.onClick(async () => {
           const tokenToUse = inputToken || this.plugin.settings.githubToken;
           if (!tokenToUse) {
-            new import_obsidian3.Notice("\u26A0\uFE0F L\xFCtfen bir GitHub PAT token girin.");
+            new import_obsidian3.Notice("L\xFCtfen bir GitHub PAT token girin.");
             return;
           }
           button.setDisabled(true);
-          button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} Oturum A\xE7\u0131l\u0131yor...`;
+          button.buttonEl.innerHTML = `${ICONS.github} Oturum A\xE7\u0131l\u0131yor...`;
           try {
             const user = await fetchGitHubUser(tokenToUse);
             this.plugin.settings.githubToken = tokenToUse;
@@ -334,21 +352,22 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
             }
             this.plugin.settings.gistId = detectedGistId;
             await this.plugin.saveSettings();
-            new import_obsidian3.Notice(`\u2705 Ho\u015F geldiniz @${user.login}! Oturum a\xE7\u0131ld\u0131. Senkronizasyon ba\u015Flat\u0131l\u0131yor...`);
+            new import_obsidian3.Notice(`Ho\u015F geldiniz @${user.login}! Oturum a\xE7\u0131ld\u0131. Senkronizasyon ba\u015Flat\u0131l\u0131yor...`);
             await this.plugin.syncWithGist();
             this.display();
           } catch (err) {
             console.error("[ExamApp Login Error]", err);
-            new import_obsidian3.Notice(`\u274C Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
+            new import_obsidian3.Notice(`Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
           } finally {
             button.setDisabled(false);
-            button.buttonEl.innerHTML = `${GITHUB_SVG_ICON} GitHub ile Oturum A\xE7`;
+            button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum A\xE7`;
           }
         });
       });
     }
     if (this.plugin.settings.githubToken) {
-      containerEl.createEl("h3", { text: "\u2601\uFE0F Gist Durumu & Otomatik Tespit" });
+      const gistHeader = containerEl.createEl("h3");
+      gistHeader.innerHTML = `${ICONS.cloud}Gist Durumu & Otomatik Tespit`;
       const gistCard = containerEl.createDiv();
       gistCard.style.padding = "12px";
       gistCard.style.borderRadius = "6px";
@@ -356,11 +375,11 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
       gistCard.style.marginBottom = "18px";
       if (this.plugin.settings.gistId) {
         const infoEl = gistCard.createEl("div");
-        infoEl.innerHTML = `<strong>\u{1F7E2} Ba\u011Fl\u0131 Gist ID:</strong> <code>${this.plugin.settings.gistId}</code> <span style="color: var(--text-muted); font-size: 0.9em;">(Otomatik Ba\u011Fland\u0131)</span>`;
+        infoEl.innerHTML = `${ICONS.checkBadge}<strong>Ba\u011Fl\u0131 Gist ID:</strong> <code>${this.plugin.settings.gistId}</code> <span style="color: var(--text-muted); font-size: 0.9em;">(Otomatik Ba\u011Fland\u0131)</span>`;
         infoEl.style.marginBottom = "10px";
       } else {
         const infoEl = gistCard.createEl("div");
-        infoEl.innerHTML = `<strong>\u26A0\uFE0F Hen\xFCz bir ExamApp Gist ba\u011Fl\u0131 de\u011Fil.</strong>`;
+        infoEl.innerHTML = `${ICONS.alertBadge}<strong>Hen\xFCz bir ExamApp Gist ba\u011Fl\u0131 de\u011Fil.</strong>`;
         infoEl.style.color = "var(--text-accent)";
         infoEl.style.marginBottom = "10px";
       }
@@ -371,13 +390,13 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
             if (id) {
               this.plugin.settings.gistId = id;
               await this.plugin.saveSettings();
-              new import_obsidian3.Notice("\u2705 ExamApp Gist ba\u015Far\u0131yla tespit edildi!");
+              new import_obsidian3.Notice("ExamApp Gist ba\u015Far\u0131yla tespit edildi!");
               this.display();
             } else {
-              new import_obsidian3.Notice("\u26A0\uFE0F Hesab\u0131n\u0131zda hen\xFCz ExamApp Gist bulunamad\u0131.");
+              new import_obsidian3.Notice("Hesab\u0131n\u0131zda hen\xFCz ExamApp Gist bulunamad\u0131.");
             }
           } catch (e) {
-            new import_obsidian3.Notice(`\u274C Taramada hata: ${e.message}`);
+            new import_obsidian3.Notice(`Taramada hata: ${e.message}`);
           }
         })
       ).addButton(
@@ -386,17 +405,18 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
             const newId = await createExamAppGist(this.plugin.settings.githubToken);
             this.plugin.settings.gistId = newId;
             await this.plugin.saveSettings();
-            new import_obsidian3.Notice("\u{1F389} Yeni ExamApp Gist ba\u015Far\u0131yla olu\u015Fturuldu ve ba\u011Fland\u0131!");
+            new import_obsidian3.Notice("Yeni ExamApp Gist ba\u015Far\u0131yla olu\u015Fturuldu ve ba\u011Fland\u0131!");
             this.display();
           } catch (e) {
-            new import_obsidian3.Notice(`\u274C Gist olu\u015Fturma hatas\u0131: ${e.message}`);
+            new import_obsidian3.Notice(`Gist olu\u015Fturma hatas\u0131: ${e.message}`);
           }
         })
       );
       const detailsEl = containerEl.createEl("details");
       detailsEl.style.marginBottom = "18px";
       detailsEl.style.cursor = "pointer";
-      const summaryEl = detailsEl.createEl("summary", { text: "\u2699\uFE0F Geli\u015Fmi\u015F: Manuel Gist ID D\xFCzenleme" });
+      const summaryEl = detailsEl.createEl("summary");
+      summaryEl.innerHTML = `${ICONS.sliders} Geli\u015Fmi\u015F: Manuel Gist ID D\xFCzenleme`;
       summaryEl.style.color = "var(--text-muted)";
       summaryEl.style.fontWeight = "bold";
       new import_obsidian3.Setting(detailsEl).setName("Manuel Gist ID (\xD6zel)").setDesc("Gist ID otomatik tespit edilir. Yaln\u0131zca \xF6zel bir Gist ID zorlamak istiyorsan\u0131z de\u011Fi\u015Ftirin.").addText(
@@ -406,7 +426,8 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
         })
       );
     }
-    containerEl.createEl("h3", { text: "\u{1F4C2} Vault Senkronizasyon Klas\xF6r\xFC" });
+    const folderHeader = containerEl.createEl("h3");
+    folderHeader.innerHTML = `${ICONS.folder}Vault Senkronizasyon Klas\xF6r\xFC`;
     new import_obsidian3.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc('Senkronize edilecek JSON dosyalar\u0131n\u0131n bulundu\u011Fu Vault i\xE7i klas\xF6r. (Varsay\u0131lan: "ExamApp Sync")').addText(
       (text) => text.setPlaceholder("ExamApp Sync").setValue(this.plugin.settings.localFolderPath).onChange(async (val) => {
         this.plugin.settings.localFolderPath = val.trim() || "ExamApp Sync";
@@ -419,14 +440,16 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian3.PluginSettingTab 
     schemaInfoBox.style.backgroundColor = "var(--background-secondary)";
     schemaInfoBox.style.borderLeft = "4px solid var(--interactive-accent)";
     schemaInfoBox.style.marginBottom = "12px";
-    schemaInfoBox.innerHTML = `\u2139\uFE0F <strong>\u015Eema G\xFCvenlik Filtresi:</strong> Bu klas\xF6r i\xE7erisindeki dosyalar taran\u0131rken sadece ge\xE7erli ExamApp soru \u015Femas\u0131na (<code>{ id, questions: [...] }</code>) sahip <code>.json</code> dosyalar\u0131 i\u015Flenir. Di\u011Fer uyumsuz JSON veya not dosyalar\u0131 g\xFCvenle atlan\u0131r.`;
+    schemaInfoBox.style.fontSize = "0.92em";
+    schemaInfoBox.innerHTML = `${ICONS.shield} <strong>\u015Eema G\xFCvenlik Filtresi:</strong> Bu klas\xF6r i\xE7erisindeki dosyalar taran\u0131rken sadece ge\xE7erli ExamApp soru \u015Femas\u0131na (<code>{ id, questions: [...] }</code>) sahip <code>.json</code> dosyalar\u0131 i\u015Flenir. Di\u011Fer uyumsuz JSON veya not dosyalar\u0131 g\xFCvenle atlan\u0131r.`;
     new import_obsidian3.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton(
       (btn) => btn.setButtonText("\u015Eimdi Tara ve Do\u011Frula").onClick(async () => {
         const sources = await scanLocalSources(this.app, this.plugin.settings.localFolderPath);
-        new import_obsidian3.Notice(`\u{1F50D} Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
+        new import_obsidian3.Notice(`Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
       })
     );
-    containerEl.createEl("h3", { text: "\u2699\uFE0F Genel Otomasyon Ayarlar\u0131" });
+    const settingsHeader = containerEl.createEl("h3");
+    settingsHeader.innerHTML = `${ICONS.sliders}Genel Otomasyon Ayarlar\u0131`;
     new import_obsidian3.Setting(containerEl).setName("Obsidian A\xE7\u0131l\u0131\u015F\u0131nda Otomatik Senkronize Et").setDesc("Obsidian ba\u015Flat\u0131ld\u0131\u011F\u0131nda Gist senkronizasyonunu arka planda otomatik olarak tetikler.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.autoSyncOnStartup).onChange(async (val) => {
         this.plugin.settings.autoSyncOnStartup = val;
