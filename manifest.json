@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "1.0.0",
 	"description": "Syncs your Obsidian question pools with ExamApp via GitHub Gist.",
-	"author": "Antigravity",
-	"authorUrl": "",
+	"author": "tafirnat",
+	"authorUrl": "https://github.com/tafirnat",
 	"isDesktopOnly": false
 }
