@@ -21,7 +21,7 @@ function formatCalloutContent(content: string): string {
 }
 
 /**
- * Generates and updates examApp_data.md in the target dataset directory.
+ * Generates and updates ExamApp_Overview.md in the target dataset directory.
  */
 export async function generateMarkdownSummary(
     app: App,
@@ -29,7 +29,8 @@ export async function generateMarkdownSummary(
     sources: any[],
     syncStatus: string = 'Success'
 ): Promise<void> {
-    const summaryFilePath = `${folderPath}/examApp_data.md`;
+    const summaryFilePath = `${folderPath}/ExamApp_Overview.md`;
+    const legacyFilePath = `${folderPath}/examApp_data.md`;
 
     // Ensure target folder exists
     let targetFolder = app.vault.getAbstractFileByPath(folderPath);
@@ -42,11 +43,21 @@ export async function generateMarkdownSummary(
         }
     }
 
+    // Clean up legacy examApp_data.md file if present
+    const legacyFile = app.vault.getAbstractFileByPath(legacyFilePath);
+    if (legacyFile instanceof TFile) {
+        try {
+            await app.vault.delete(legacyFile);
+        } catch (e) {
+            console.warn(`[ExamApp Sync] Could not delete legacy summary file (${legacyFilePath}):`, e);
+        }
+    }
+
     const now = new Date();
     const updatedISO = now.toISOString();
     let createdISO = updatedISO;
 
-    // Check if examApp_data.md already exists to preserve `created` timestamp & check for changes
+    // Preserve created date if ExamApp_Overview.md already exists
     const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
     if (existingFile instanceof TFile) {
         try {
@@ -60,7 +71,7 @@ export async function generateMarkdownSummary(
         }
     }
 
-    // Calculation statistics
+    // Statistics calculation
     const totalDatasets = sources.length;
     let totalQuestions = 0;
     sources.forEach(s => {
@@ -69,39 +80,40 @@ export async function generateMarkdownSummary(
         }
     });
 
-    const formattedSyncTime = now.toLocaleString('sv-SE').replace(' ', ' '); // YYYY-MM-DD HH:mm:ss format
+    const formattedSyncTime = now.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:mm:ss
 
-    // 1. YAML Frontmatter
+    // 1. YAML Frontmatter & Header (English)
     let markdown = `---
-title: ExamApp Dataset & Sync Dashboard
-type: examapp-summary
+title: ExamApp Dataset Overview
+type: examapp-overview
 created: ${createdISO}
 updated: ${updatedISO}
 tags:
-  - examapp/dashboard
+  - examapp/overview
   - examapp/datasets
 ---
 
-# 📊 ExamApp Dataset & Sync Dashboard
+# 📊 ExamApp Datasets & Sync Overview
 
-> [!abstract] Dashboard Overview
-> - 📁 **Total Datasets / Sources**: \`${totalDatasets}\`
+> [!abstract] System Overview
+> - 📁 **Total Datasets**: \`${totalDatasets}\`
 > - ❓ **Total Questions**: \`${totalQuestions}\`
 > - 🔄 **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
 
 ## 📑 Datasets Index
 
-| Dataset Name | File Name | Questions | Categories / Tags | Last Modified |
-| :--- | :--- | :---: | :--- | :--- |
+| Dataset Title | JSON File | Questions | App Version | Categories / Tags | Last Modified |
+| :--- | :--- | :---: | :---: | :--- | :--- |
 `;
 
     if (sources.length === 0) {
-        markdown += `| *No datasets found* | - | 0 | - | - |\n`;
+        markdown += `| *No datasets found* | - | 0 | - | - | - |\n`;
     } else {
         sources.forEach(s => {
-            const name = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
+            const title = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
             const fileName = getDatasetFilename(s);
             const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
+            const appVersion = s.target_version || s.version || s.exam_metadata?.version || 'N/A';
             
             let categories = '-';
             if (Array.isArray(s.categories) && s.categories.length > 0) {
@@ -123,49 +135,56 @@ tags:
             }
 
             // Clean markdown table special characters
-            const safeName = name.replace(/\|/g, '\\|');
+            const safeTitle = title.replace(/\|/g, '\\|');
             const safeFileName = fileName.replace(/\|/g, '\\|');
             const safeCategories = categories.replace(/\|/g, '\\|');
 
-            markdown += `| **${safeName}** | \`${safeFileName}\` | ${qCount} | ${safeCategories} | ${lastMod} |\n`;
+            markdown += `| **${safeTitle}** | [[${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
         });
     }
 
-    markdown += `\n## 🔍 Dataset Details\n\n`;
+    markdown += `\n## 🔍 Dataset Metadata\n\n`;
 
     if (sources.length === 0) {
-        markdown += `*No dataset details available.*\n`;
+        markdown += `*No dataset metadata available.*\n`;
     } else {
         sources.forEach(s => {
             const title = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
+            const fileName = getDatasetFilename(s);
             const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
-            const description = s.description || s.exam_metadata?.description || '';
+            const description = s.description || s.exam_metadata?.description || 'N/A';
+            const appVersion = s.target_version || s.version || s.exam_metadata?.version || 'N/A';
+            const author = s.author || s.exam_metadata?.author || 'N/A';
+            const license = s.license || s.exam_metadata?.license || 'N/A';
 
-            let calloutInner = `**ID**: \`${s.id}\` | **Questions**: ${qCount}\n`;
-            if (description) {
-                calloutInner += `**Description**: ${description}\n`;
+            let categories = 'N/A';
+            if (Array.isArray(s.categories) && s.categories.length > 0) {
+                categories = s.categories.join(', ');
+            } else if (Array.isArray(s.tags) && s.tags.length > 0) {
+                categories = s.tags.join(', ');
+            } else if (s.exam_metadata?.category) {
+                categories = String(s.exam_metadata.category);
             }
-            calloutInner += `\n### Questions Preview\n\n`;
 
-            if (Array.isArray(s.questions) && s.questions.length > 0) {
-                s.questions.forEach((q: any, index: number) => {
-                    const qId = q.id !== undefined && q.id !== null ? q.id : index + 1;
-                    const qType = q.type || 'unknown';
-                    const qDifficulty = q.difficulty || q.metadata?.difficulty || 'N/A';
-                    const rawText = q.content?.text || q.text || '(No text preview)';
-                    const textPreview = String(rawText).replace(/\n/g, ' ').substring(0, 120);
-                    const explanation = q.explanation || q.answer?.explanation || '';
-
-                    calloutInner += `- **[#${qId}]** \`${qType}\` (Difficulty: *${qDifficulty}*)\n`;
-                    calloutInner += `  - **Question**: ${textPreview}${rawText.length > 120 ? '...' : ''}\n`;
-                    if (explanation) {
-                        const expPreview = String(explanation).replace(/\n/g, ' ').substring(0, 150);
-                        calloutInner += `  - **Explanation**: ${expPreview}${explanation.length > 150 ? '...' : ''}\n`;
-                    }
-                });
-            } else {
-                calloutInner += `*No questions in this dataset.*\n`;
+            let lastMod = 'N/A';
+            if (s.lastUsed || s.lastUpdated || s.updatedAt) {
+                const ts = s.lastUsed || s.lastUpdated || s.updatedAt;
+                try {
+                    lastMod = new Date(ts).toISOString().split('T')[0];
+                } catch (e) {
+                    lastMod = String(ts);
+                }
             }
+
+            let calloutInner = `- **ID**: \`${s.id}\`
+- **File**: [[${fileName}]]
+- **Total Questions**: \`${qCount}\`
+- **App Version**: \`${appVersion}\`
+- **Author**: \`${author}\`
+- **License**: \`${license}\`
+- **Description**: ${description}
+- **Categories / Tags**: ${categories}
+- **Last Modified**: ${lastMod}`;
 
             markdown += `> [!info]+ Dataset: ${title}\n`;
             markdown += formatCalloutContent(calloutInner);
@@ -173,12 +192,11 @@ tags:
         });
     }
 
-    // Safe Atomic write: Check if file content changed to prevent redundant vault updates / triggers
+    // Atomic write to vault file
     if (existingFile instanceof TFile) {
         try {
             const currentContent = await app.vault.read(existingFile);
             if (currentContent === markdown) {
-                // Content is unchanged, no write needed
                 return;
             }
             await app.vault.modify(existingFile, markdown);

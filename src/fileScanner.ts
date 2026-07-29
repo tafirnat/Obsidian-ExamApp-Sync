@@ -80,7 +80,7 @@ export async function cleanupOldDirectory(app: App, oldFolderPath: string, newFo
     for (const child of children) {
         if (!(child instanceof TFile)) continue;
 
-        if (child.name === 'examApp_data.md') {
+        if (child.name === 'examApp_data.md' || child.name === 'ExamApp_Overview.md') {
             try {
                 await app.vault.delete(child);
                 deletedCount++;

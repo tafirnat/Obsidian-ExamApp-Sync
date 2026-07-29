@@ -300,7 +300,7 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Klasör Yolu')
-			.setDesc('Senkronize edilecek JSON dosyalarının ve examApp_data.md özet panosunun bulunduğu Vault içi klasör.')
+			.setDesc('Senkronize edilecek JSON dosyalarının ve ExamApp_Overview.md özet panosunun bulunduğu Vault içi klasör.')
 			.addText(text => text
 				.setPlaceholder('ExamApp Sync')
 				.setValue(this.plugin.settings.localFolderPath)

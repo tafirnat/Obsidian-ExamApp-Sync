@@ -221,7 +221,7 @@ async function cleanupOldDirectory(app, oldFolderPath, newFolderPath) {
   const children = [...oldFolder.children];
   for (const child of children) {
     if (!(child instanceof import_obsidian2.TFile)) continue;
-    if (child.name === "examApp_data.md") {
+    if (child.name === "examApp_data.md" || child.name === "ExamApp_Overview.md") {
       try {
         await app.vault.delete(child);
         deletedCount++;
@@ -265,7 +265,8 @@ function formatCalloutContent(content) {
   return content.split("\n").map((line) => `> ${line}`).join("\n");
 }
 async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "Success") {
-  const summaryFilePath = `${folderPath}/examApp_data.md`;
+  const summaryFilePath = `${folderPath}/ExamApp_Overview.md`;
+  const legacyFilePath = `${folderPath}/examApp_data.md`;
   let targetFolder = app.vault.getAbstractFileByPath(folderPath);
   if (!targetFolder || !(targetFolder instanceof import_obsidian3.TFolder)) {
     try {
@@ -273,6 +274,14 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
     } catch (e) {
       console.error(`[ExamApp Sync] Failed to create directory for summary: ${folderPath}`, e);
       return;
+    }
+  }
+  const legacyFile = app.vault.getAbstractFileByPath(legacyFilePath);
+  if (legacyFile instanceof import_obsidian3.TFile) {
+    try {
+      await app.vault.delete(legacyFile);
+    } catch (e) {
+      console.warn(`[ExamApp Sync] Could not delete legacy summary file (${legacyFilePath}):`, e);
     }
   }
   const now = /* @__PURE__ */ new Date();
@@ -297,44 +306,45 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
       totalQuestions += s.questions.length;
     }
   });
-  const formattedSyncTime = now.toLocaleString("sv-SE").replace(" ", " ");
+  const formattedSyncTime = now.toISOString().replace("T", " ").substring(0, 19);
   let markdown = `---
-title: ExamApp Dataset & Sync Dashboard
-type: examapp-summary
+title: ExamApp Dataset Overview
+type: examapp-overview
 created: ${createdISO}
 updated: ${updatedISO}
 tags:
-  - examapp/dashboard
+  - examapp/overview
   - examapp/datasets
 ---
 
-# \u{1F4CA} ExamApp Dataset & Sync Dashboard
+# \u{1F4CA} ExamApp Datasets & Sync Overview
 
-> [!abstract] Dashboard Overview
-> - \u{1F4C1} **Total Datasets / Sources**: \`${totalDatasets}\`
+> [!abstract] System Overview
+> - \u{1F4C1} **Total Datasets**: \`${totalDatasets}\`
 > - \u2753 **Total Questions**: \`${totalQuestions}\`
 > - \u{1F504} **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
 
 ## \u{1F4D1} Datasets Index
 
-| Dataset Name | File Name | Questions | Categories / Tags | Last Modified |
-| :--- | :--- | :---: | :--- | :--- |
+| Dataset Title | JSON File | Questions | App Version | Categories / Tags | Last Modified |
+| :--- | :--- | :---: | :---: | :--- | :--- |
 `;
   if (sources.length === 0) {
-    markdown += `| *No datasets found* | - | 0 | - | - |
+    markdown += `| *No datasets found* | - | 0 | - | - | - |
 `;
   } else {
     sources.forEach((s) => {
-      var _a, _b;
-      const name = s.name || ((_a = s.exam_metadata) == null ? void 0 : _a.title) || s.title || s.id || "Untitled Dataset";
+      var _a, _b, _c;
+      const title = s.name || ((_a = s.exam_metadata) == null ? void 0 : _a.title) || s.title || s.id || "Untitled Dataset";
       const fileName = getDatasetFilename(s);
       const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
+      const appVersion = s.target_version || s.version || ((_b = s.exam_metadata) == null ? void 0 : _b.version) || "N/A";
       let categories = "-";
       if (Array.isArray(s.categories) && s.categories.length > 0) {
         categories = s.categories.join(", ");
       } else if (Array.isArray(s.tags) && s.tags.length > 0) {
         categories = s.tags.join(", ");
-      } else if ((_b = s.exam_metadata) == null ? void 0 : _b.category) {
+      } else if ((_c = s.exam_metadata) == null ? void 0 : _c.category) {
         categories = String(s.exam_metadata.category);
       }
       let lastMod = "-";
@@ -346,59 +356,56 @@ tags:
           lastMod = String(ts);
         }
       }
-      const safeName = name.replace(/\|/g, "\\|");
+      const safeTitle = title.replace(/\|/g, "\\|");
       const safeFileName = fileName.replace(/\|/g, "\\|");
       const safeCategories = categories.replace(/\|/g, "\\|");
-      markdown += `| **${safeName}** | \`${safeFileName}\` | ${qCount} | ${safeCategories} | ${lastMod} |
+      markdown += `| **${safeTitle}** | [[${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
 `;
     });
   }
   markdown += `
-## \u{1F50D} Dataset Details
+## \u{1F50D} Dataset Metadata
 
 `;
   if (sources.length === 0) {
-    markdown += `*No dataset details available.*
+    markdown += `*No dataset metadata available.*
 `;
   } else {
     sources.forEach((s) => {
-      var _a, _b;
+      var _a, _b, _c, _d, _e, _f;
       const title = s.name || ((_a = s.exam_metadata) == null ? void 0 : _a.title) || s.title || s.id || "Untitled Dataset";
+      const fileName = getDatasetFilename(s);
       const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
-      const description = s.description || ((_b = s.exam_metadata) == null ? void 0 : _b.description) || "";
-      let calloutInner = `**ID**: \`${s.id}\` | **Questions**: ${qCount}
-`;
-      if (description) {
-        calloutInner += `**Description**: ${description}
-`;
+      const description = s.description || ((_b = s.exam_metadata) == null ? void 0 : _b.description) || "N/A";
+      const appVersion = s.target_version || s.version || ((_c = s.exam_metadata) == null ? void 0 : _c.version) || "N/A";
+      const author = s.author || ((_d = s.exam_metadata) == null ? void 0 : _d.author) || "N/A";
+      const license = s.license || ((_e = s.exam_metadata) == null ? void 0 : _e.license) || "N/A";
+      let categories = "N/A";
+      if (Array.isArray(s.categories) && s.categories.length > 0) {
+        categories = s.categories.join(", ");
+      } else if (Array.isArray(s.tags) && s.tags.length > 0) {
+        categories = s.tags.join(", ");
+      } else if ((_f = s.exam_metadata) == null ? void 0 : _f.category) {
+        categories = String(s.exam_metadata.category);
       }
-      calloutInner += `
-### Questions Preview
-
-`;
-      if (Array.isArray(s.questions) && s.questions.length > 0) {
-        s.questions.forEach((q, index) => {
-          var _a2, _b2, _c;
-          const qId = q.id !== void 0 && q.id !== null ? q.id : index + 1;
-          const qType = q.type || "unknown";
-          const qDifficulty = q.difficulty || ((_a2 = q.metadata) == null ? void 0 : _a2.difficulty) || "N/A";
-          const rawText = ((_b2 = q.content) == null ? void 0 : _b2.text) || q.text || "(No text preview)";
-          const textPreview = String(rawText).replace(/\n/g, " ").substring(0, 120);
-          const explanation = q.explanation || ((_c = q.answer) == null ? void 0 : _c.explanation) || "";
-          calloutInner += `- **[#${qId}]** \`${qType}\` (Difficulty: *${qDifficulty}*)
-`;
-          calloutInner += `  - **Question**: ${textPreview}${rawText.length > 120 ? "..." : ""}
-`;
-          if (explanation) {
-            const expPreview = String(explanation).replace(/\n/g, " ").substring(0, 150);
-            calloutInner += `  - **Explanation**: ${expPreview}${explanation.length > 150 ? "..." : ""}
-`;
-          }
-        });
-      } else {
-        calloutInner += `*No questions in this dataset.*
-`;
+      let lastMod = "N/A";
+      if (s.lastUsed || s.lastUpdated || s.updatedAt) {
+        const ts = s.lastUsed || s.lastUpdated || s.updatedAt;
+        try {
+          lastMod = new Date(ts).toISOString().split("T")[0];
+        } catch (e) {
+          lastMod = String(ts);
+        }
       }
+      let calloutInner = `- **ID**: \`${s.id}\`
+- **File**: [[${fileName}]]
+- **Total Questions**: \`${qCount}\`
+- **App Version**: \`${appVersion}\`
+- **Author**: \`${author}\`
+- **License**: \`${license}\`
+- **Description**: ${description}
+- **Categories / Tags**: ${categories}
+- **Last Modified**: ${lastMod}`;
       markdown += `> [!info]+ Dataset: ${title}
 `;
       markdown += formatCalloutContent(calloutInner);
@@ -645,7 +652,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
     }
     const folderHeader = containerEl.createEl("h3");
     folderHeader.innerHTML = `${ICONS.folder}Vault Senkronizasyon Klas\xF6r\xFC`;
-    new import_obsidian4.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc("Senkronize edilecek JSON dosyalar\u0131n\u0131n ve examApp_data.md \xF6zet panosunun bulundu\u011Fu Vault i\xE7i klas\xF6r.").addText(
+    new import_obsidian4.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc("Senkronize edilecek JSON dosyalar\u0131n\u0131n ve ExamApp_Overview.md \xF6zet panosunun bulundu\u011Fu Vault i\xE7i klas\xF6r.").addText(
       (text) => text.setPlaceholder("ExamApp Sync").setValue(this.plugin.settings.localFolderPath).onChange(async (val) => {
         const oldFolderPath = this.plugin.settings.localFolderPath;
         const newFolderPath = val.trim() || "ExamApp Sync";
