@@ -75,7 +75,7 @@ export async function generateMarkdownSummary(
 > - 📁 **Total Datasets**: \`${totalDatasets}\`
 > - ❓ **Total Questions**: \`${totalQuestions}\`
 > - 🔄 **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
-> - 📘 **Guide & AI Prompt**: [[01_About_ExamApp.md|01_About_ExamApp.md]]
+> - 📘 **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
 
 ## 📑 Datasets Index
 
@@ -140,19 +140,30 @@ export async function generateMarkdownSummary(
         }
     }
 
-    // Also ensure the static documentation guide (01_About_ExamApp.md) exists
+    // Also ensure the static documentation guide (01_ExamApp_About.md) exists
     await generateAboutExamAppMarkdown(app, parentFolderPath);
 }
 
 /**
- * Task 2: Generates and maintains 01_About_ExamApp.md in the parent folder.
+ * Task 2: Generates and maintains 01_ExamApp_About.md in the parent folder.
  * This is a static reference guide explaining ExamApp, JSON schemas, AI prompts, and GitHub links.
  */
 export async function generateAboutExamAppMarkdown(
     app: App,
     parentFolderPath: string
 ): Promise<void> {
-    const aboutFilePath = `${parentFolderPath}/01_About_ExamApp.md`;
+    const aboutFilePath = `${parentFolderPath}/01_ExamApp_About.md`;
+    const oldAboutFilePath = `${parentFolderPath}/01_About_ExamApp.md`;
+
+    // Clean up legacy filename if present
+    const oldFile = app.vault.getAbstractFileByPath(oldAboutFilePath);
+    if (oldFile instanceof TFile) {
+        try {
+            await app.vault.delete(oldFile);
+        } catch (e) {
+            // ignore cleanup error
+        }
+    }
 
     const markdown = `# 📘 About ExamApp & AI Dataset Guide
 
@@ -162,6 +173,7 @@ export async function generateAboutExamAppMarkdown(
 > - 📊 **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
 
 ---
+
 
 ## 💡 What is ExamApp?
 

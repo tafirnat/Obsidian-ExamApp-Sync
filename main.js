@@ -304,7 +304,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
 > - \u{1F4C1} **Total Datasets**: \`${totalDatasets}\`
 > - \u2753 **Total Questions**: \`${totalQuestions}\`
 > - \u{1F504} **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
-> - \u{1F4D8} **Guide & AI Prompt**: [[01_About_ExamApp.md|01_About_ExamApp.md]]
+> - \u{1F4D8} **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
 
 ## \u{1F4D1} Datasets Index
 
@@ -365,7 +365,15 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
   await generateAboutExamAppMarkdown(app, parentFolderPath);
 }
 async function generateAboutExamAppMarkdown(app, parentFolderPath) {
-  const aboutFilePath = `${parentFolderPath}/01_About_ExamApp.md`;
+  const aboutFilePath = `${parentFolderPath}/01_ExamApp_About.md`;
+  const oldAboutFilePath = `${parentFolderPath}/01_About_ExamApp.md`;
+  const oldFile = app.vault.getAbstractFileByPath(oldAboutFilePath);
+  if (oldFile instanceof import_obsidian3.TFile) {
+    try {
+      await app.vault.delete(oldFile);
+    } catch (e) {
+    }
+  }
   const markdown = `# \u{1F4D8} About ExamApp & AI Dataset Guide
 
 > [!info] Open Source Project Reference
@@ -374,6 +382,7 @@ async function generateAboutExamAppMarkdown(app, parentFolderPath) {
 > - \u{1F4CA} **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
 
 ---
+
 
 ## \u{1F4A1} What is ExamApp?
 
