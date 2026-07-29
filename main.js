@@ -261,9 +261,6 @@ function getDatasetFilename(source) {
   const shortId = (source.id || "00000000").substring(0, 8);
   return `${safeName}_${shortId}.json`;
 }
-function formatCalloutContent(content) {
-  return content.split("\n").map((line) => `> ${line}`).join("\n");
-}
 async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "Success") {
   const summaryFilePath = `${folderPath}/ExamApp_Overview.md`;
   const legacyFilePath = `${folderPath}/examApp_data.md`;
@@ -364,56 +361,7 @@ tags:
     });
   }
   markdown += `
-## \u{1F50D} Dataset Metadata
-
 `;
-  if (sources.length === 0) {
-    markdown += `*No dataset metadata available.*
-`;
-  } else {
-    sources.forEach((s) => {
-      var _a, _b, _c, _d, _e, _f;
-      const title = s.name || ((_a = s.exam_metadata) == null ? void 0 : _a.title) || s.title || s.id || "Untitled Dataset";
-      const fileName = getDatasetFilename(s);
-      const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
-      const description = s.description || ((_b = s.exam_metadata) == null ? void 0 : _b.description) || "N/A";
-      const appVersion = s.target_version || s.version || ((_c = s.exam_metadata) == null ? void 0 : _c.version) || "N/A";
-      const author = s.author || ((_d = s.exam_metadata) == null ? void 0 : _d.author) || "N/A";
-      const license = s.license || ((_e = s.exam_metadata) == null ? void 0 : _e.license) || "N/A";
-      let categories = "N/A";
-      if (Array.isArray(s.categories) && s.categories.length > 0) {
-        categories = s.categories.join(", ");
-      } else if (Array.isArray(s.tags) && s.tags.length > 0) {
-        categories = s.tags.join(", ");
-      } else if ((_f = s.exam_metadata) == null ? void 0 : _f.category) {
-        categories = String(s.exam_metadata.category);
-      }
-      let lastMod = "N/A";
-      if (s.lastUsed || s.lastUpdated || s.updatedAt) {
-        const ts = s.lastUsed || s.lastUpdated || s.updatedAt;
-        try {
-          lastMod = new Date(ts).toISOString().split("T")[0];
-        } catch (e) {
-          lastMod = String(ts);
-        }
-      }
-      let calloutInner = `- **ID**: \`${s.id}\`
-- **File**: [[${fileName}]]
-- **Total Questions**: \`${qCount}\`
-- **App Version**: \`${appVersion}\`
-- **Author**: \`${author}\`
-- **License**: \`${license}\`
-- **Description**: ${description}
-- **Categories / Tags**: ${categories}
-- **Last Modified**: ${lastMod}`;
-      markdown += `> [!info]+ Dataset: ${title}
-`;
-      markdown += formatCalloutContent(calloutInner);
-      markdown += `
-
-`;
-    });
-  }
   if (existingFile instanceof import_obsidian3.TFile) {
     try {
       const currentContent = await app.vault.read(existingFile);

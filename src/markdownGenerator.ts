@@ -11,16 +11,6 @@ function getDatasetFilename(source: any): string {
 }
 
 /**
- * Format string for callouts ensuring each line is prefixed with '>'
- */
-function formatCalloutContent(content: string): string {
-    return content
-        .split('\n')
-        .map(line => `> ${line}`)
-        .join('\n');
-}
-
-/**
  * Generates and updates ExamApp_Overview.md in the target dataset directory.
  */
 export async function generateMarkdownSummary(
@@ -82,7 +72,7 @@ export async function generateMarkdownSummary(
 
     const formattedSyncTime = now.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:mm:ss
 
-    // 1. YAML Frontmatter & Header (English)
+    // YAML Frontmatter & Header (English)
     let markdown = `---
 title: ExamApp Dataset Overview
 type: examapp-overview
@@ -143,54 +133,7 @@ tags:
         });
     }
 
-    markdown += `\n## 🔍 Dataset Metadata\n\n`;
-
-    if (sources.length === 0) {
-        markdown += `*No dataset metadata available.*\n`;
-    } else {
-        sources.forEach(s => {
-            const title = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
-            const fileName = getDatasetFilename(s);
-            const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
-            const description = s.description || s.exam_metadata?.description || 'N/A';
-            const appVersion = s.target_version || s.version || s.exam_metadata?.version || 'N/A';
-            const author = s.author || s.exam_metadata?.author || 'N/A';
-            const license = s.license || s.exam_metadata?.license || 'N/A';
-
-            let categories = 'N/A';
-            if (Array.isArray(s.categories) && s.categories.length > 0) {
-                categories = s.categories.join(', ');
-            } else if (Array.isArray(s.tags) && s.tags.length > 0) {
-                categories = s.tags.join(', ');
-            } else if (s.exam_metadata?.category) {
-                categories = String(s.exam_metadata.category);
-            }
-
-            let lastMod = 'N/A';
-            if (s.lastUsed || s.lastUpdated || s.updatedAt) {
-                const ts = s.lastUsed || s.lastUpdated || s.updatedAt;
-                try {
-                    lastMod = new Date(ts).toISOString().split('T')[0];
-                } catch (e) {
-                    lastMod = String(ts);
-                }
-            }
-
-            let calloutInner = `- **ID**: \`${s.id}\`
-- **File**: [[${fileName}]]
-- **Total Questions**: \`${qCount}\`
-- **App Version**: \`${appVersion}\`
-- **Author**: \`${author}\`
-- **License**: \`${license}\`
-- **Description**: ${description}
-- **Categories / Tags**: ${categories}
-- **Last Modified**: ${lastMod}`;
-
-            markdown += `> [!info]+ Dataset: ${title}\n`;
-            markdown += formatCalloutContent(calloutInner);
-            markdown += `\n\n`;
-        });
-    }
+    markdown += `\n`;
 
     // Atomic write to vault file
     if (existingFile instanceof TFile) {
