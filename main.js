@@ -172,6 +172,7 @@ async function scanLocalSources(app, folderPath) {
     if (child instanceof import_obsidian2.TFile && child.extension === "json") {
       try {
         const content = await app.vault.read(child);
+        if (!content || content.trim().length === 0) continue;
         const data = JSON.parse(content);
         const { valid, isExamAppSource } = validateExamSchema(data);
         if (isExamAppSource && valid) {
@@ -736,8 +737,22 @@ async function fetchGistData(settings) {
   }
   const gist = response.json;
   const file = gist.files && gist.files[GIST_FILENAME2];
-  if (file && file.content) {
-    return JSON.parse(file.content);
+  if (file) {
+    let contentStr = file.content;
+    if (file.truncated && file.raw_url) {
+      const rawResponse = await (0, import_obsidian5.requestUrl)({
+        url: file.raw_url,
+        headers: {
+          "Authorization": `Bearer ${settings.githubToken.trim()}`
+        }
+      });
+      if (rawResponse.status === 200) {
+        contentStr = rawResponse.text;
+      }
+    }
+    if (contentStr && contentStr.trim().length > 0) {
+      return JSON.parse(contentStr);
+    }
   }
   return {
     version: 2,

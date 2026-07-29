@@ -49,8 +49,26 @@ export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<
     const gist = response.json;
     const file = gist.files && gist.files[GIST_FILENAME];
     
-    if (file && file.content) {
-        return JSON.parse(file.content);
+    if (file) {
+        let contentStr = file.content;
+
+        // GitHub Gist API truncates files larger than ~1MB and sets truncated = true.
+        // If truncated, fetch the complete raw content from file.raw_url.
+        if (file.truncated && file.raw_url) {
+            const rawResponse = await requestUrl({
+                url: file.raw_url,
+                headers: {
+                    'Authorization': `Bearer ${settings.githubToken.trim()}`
+                }
+            });
+            if (rawResponse.status === 200) {
+                contentStr = rawResponse.text;
+            }
+        }
+
+        if (contentStr && contentStr.trim().length > 0) {
+            return JSON.parse(contentStr);
+        }
     }
     
     // Gist found but no exam_app_backup.json inside yet

@@ -15,6 +15,7 @@ export async function scanLocalSources(app: App, folderPath: string): Promise<an
         if (child instanceof TFile && child.extension === 'json') {
             try {
                 const content = await app.vault.read(child);
+                if (!content || content.trim().length === 0) continue;
                 const data = JSON.parse(content);
                 
                 const { valid, isExamAppSource } = validateExamSchema(data);
