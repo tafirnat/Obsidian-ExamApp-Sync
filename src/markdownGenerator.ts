@@ -44,22 +44,6 @@ export async function generateMarkdownSummary(
     }
 
     const now = new Date();
-    const updatedISO = now.toISOString();
-    let createdISO = updatedISO;
-
-    // Preserve created date if ExamApp_Overview.md already exists
-    const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
-    if (existingFile instanceof TFile) {
-        try {
-            const existingContent = await app.vault.read(existingFile);
-            const createdMatch = existingContent.match(/^created:\s*["']?([^"'\r\n]+)["']?/m);
-            if (createdMatch && createdMatch[1]) {
-                createdISO = createdMatch[1].trim();
-            }
-        } catch (e) {
-            console.warn('[ExamApp Sync] Could not read existing summary file created date:', e);
-        }
-    }
 
     // Statistics calculation
     const totalDatasets = sources.length;
@@ -72,18 +56,8 @@ export async function generateMarkdownSummary(
 
     const formattedSyncTime = now.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:mm:ss
 
-    // YAML Frontmatter & Header (English)
-    let markdown = `---
-title: ExamApp Dataset Overview
-type: examapp-overview
-created: ${createdISO}
-updated: ${updatedISO}
-tags:
-  - examapp/overview
-  - examapp/datasets
----
-
-# 📊 ExamApp Datasets & Sync Overview
+    // Header & Content (100% English, no YAML frontmatter to prevent Obsidian localized Properties panel)
+    let markdown = `# 📊 ExamApp Datasets & Sync Overview
 
 > [!abstract] System Overview
 > - 📁 **Total Datasets**: \`${totalDatasets}\`
@@ -136,6 +110,7 @@ tags:
     markdown += `\n`;
 
     // Atomic write to vault file
+    const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
     if (existingFile instanceof TFile) {
         try {
             const currentContent = await app.vault.read(existingFile);

@@ -282,20 +282,6 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
     }
   }
   const now = /* @__PURE__ */ new Date();
-  const updatedISO = now.toISOString();
-  let createdISO = updatedISO;
-  const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
-  if (existingFile instanceof import_obsidian3.TFile) {
-    try {
-      const existingContent = await app.vault.read(existingFile);
-      const createdMatch = existingContent.match(/^created:\s*["']?([^"'\r\n]+)["']?/m);
-      if (createdMatch && createdMatch[1]) {
-        createdISO = createdMatch[1].trim();
-      }
-    } catch (e) {
-      console.warn("[ExamApp Sync] Could not read existing summary file created date:", e);
-    }
-  }
   const totalDatasets = sources.length;
   let totalQuestions = 0;
   sources.forEach((s) => {
@@ -304,17 +290,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
     }
   });
   const formattedSyncTime = now.toISOString().replace("T", " ").substring(0, 19);
-  let markdown = `---
-title: ExamApp Dataset Overview
-type: examapp-overview
-created: ${createdISO}
-updated: ${updatedISO}
-tags:
-  - examapp/overview
-  - examapp/datasets
----
-
-# \u{1F4CA} ExamApp Datasets & Sync Overview
+  let markdown = `# \u{1F4CA} ExamApp Datasets & Sync Overview
 
 > [!abstract] System Overview
 > - \u{1F4C1} **Total Datasets**: \`${totalDatasets}\`
@@ -362,6 +338,7 @@ tags:
   }
   markdown += `
 `;
+  const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
   if (existingFile instanceof import_obsidian3.TFile) {
     try {
       const currentContent = await app.vault.read(existingFile);
