@@ -308,11 +308,11 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
 
 ## \u{1F4D1} Datasets Index
 
-| Dataset Title | JSON File | Questions | App Version | Categories / Tags | Last Modified |
-| :--- | :--- | :---: | :---: | :--- | :--- |
+| Dataset Title | Questions | App Version | Categories / Tags | Last Modified |
+| :--- | :---: | :---: | :--- | :--- |
 `;
   if (sources.length === 0) {
-    markdown += `| *No datasets found* | - | 0 | - | - | - |
+    markdown += `| *No datasets found* | 0 | - | - | - |
 `;
   } else {
     sources.forEach((s) => {
@@ -340,9 +340,8 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
         }
       }
       const safeTitle = title.replace(/\|/g, "\\|");
-      const safeFileName = fileName.replace(/\|/g, "\\|");
       const safeCategories = categories.replace(/\|/g, "\\|");
-      markdown += `| **${safeTitle}** | [[${relativeFilePath}|${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
+      markdown += `| [[${relativeFilePath}\\|**${safeTitle}**]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
 `;
     });
   }

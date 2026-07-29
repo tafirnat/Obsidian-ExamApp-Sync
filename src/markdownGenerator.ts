@@ -79,12 +79,12 @@ export async function generateMarkdownSummary(
 
 ## 📑 Datasets Index
 
-| Dataset Title | JSON File | Questions | App Version | Categories / Tags | Last Modified |
-| :--- | :--- | :---: | :---: | :--- | :--- |
+| Dataset Title | Questions | App Version | Categories / Tags | Last Modified |
+| :--- | :---: | :---: | :--- | :--- |
 `;
 
     if (sources.length === 0) {
-        markdown += `| *No datasets found* | - | 0 | - | - | - |\n`;
+        markdown += `| *No datasets found* | 0 | - | - | - |\n`;
     } else {
         sources.forEach(s => {
             const title = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
@@ -114,10 +114,10 @@ export async function generateMarkdownSummary(
 
             // Clean markdown table special characters
             const safeTitle = title.replace(/\|/g, '\\|');
-            const safeFileName = fileName.replace(/\|/g, '\\|');
             const safeCategories = categories.replace(/\|/g, '\\|');
 
-            markdown += `| **${safeTitle}** | [[${relativeFilePath}|${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
+            // Escape pipe with \\| so Obsidian table renderer keeps the link within column 1
+            markdown += `| [[${relativeFilePath}\\|**${safeTitle}**]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
         });
     }
 
