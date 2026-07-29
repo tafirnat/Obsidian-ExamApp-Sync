@@ -304,6 +304,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
 > - \u{1F4C1} **Total Datasets**: \`${totalDatasets}\`
 > - \u2753 **Total Questions**: \`${totalQuestions}\`
 > - \u{1F504} **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
+> - \u{1F4D8} **Guide & AI Prompt**: [[01_About_ExamApp.md|01_About_ExamApp.md]]
 
 ## \u{1F4D1} Datasets Index
 
@@ -345,16 +346,13 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
 `;
     });
   }
-  markdown += `
-`;
   const existingFile = app.vault.getAbstractFileByPath(summaryFilePath);
   if (existingFile instanceof import_obsidian3.TFile) {
     try {
       const currentContent = await app.vault.read(existingFile);
-      if (currentContent === markdown) {
-        return;
+      if (currentContent !== markdown) {
+        await app.vault.modify(existingFile, markdown);
       }
-      await app.vault.modify(existingFile, markdown);
     } catch (e) {
       console.error(`[ExamApp Sync] Failed to update summary file: ${summaryFilePath}`, e);
     }
@@ -363,6 +361,237 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
       await app.vault.create(summaryFilePath, markdown);
     } catch (e) {
       console.error(`[ExamApp Sync] Failed to create summary file: ${summaryFilePath}`, e);
+    }
+  }
+  await generateAboutExamAppMarkdown(app, parentFolderPath);
+}
+async function generateAboutExamAppMarkdown(app, parentFolderPath) {
+  const aboutFilePath = `${parentFolderPath}/01_About_ExamApp.md`;
+  const markdown = `# \u{1F4D8} About ExamApp & AI Dataset Guide
+
+> [!info] Open Source Project Reference
+> **ExamApp** is an open-source, web-based interactive flashcard and exam preparation application.
+> - \u{1F310} **GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+> - \u{1F4CA} **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+
+---
+
+## \u{1F4A1} What is ExamApp?
+
+**ExamApp** allows students, developers, and educators to create, manage, and study custom question banks (datasets). Key features include:
+- Interactive flashcards with spaced repetition and confidence tracking.
+- Multiple question format support (Single Choice, Multiple Choice, True/False, Flashcards, Open Ended/Text Input).
+- Seamless synchronization with GitHub Gists and Obsidian Vault via the **Obsidian ExamApp Sync Plugin**.
+
+---
+
+## \u{1F916} AI & Human Dataset Schema Specification
+
+To ensure any JSON dataset file is recognized and synced properly by ExamApp, it **must** strictly conform to the following JSON structure.
+
+### 1. Root Dataset Schema
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| \`id\` | \`string\` | **Yes** | Unique identifier (UUID v4 or slug string) |
+| \`name\` / \`title\` | \`string\` | **Yes** | Title of the dataset / question pool |
+| \`description\` | \`string\` | No | Short description of the dataset topic |
+| \`target_version\` | \`string\` | No | Compatible ExamApp version (e.g. \`"1.0.0"\`) |
+| \`categories\` / \`tags\` | \`array<string>\` | No | List of category names or tags |
+| \`questions\` | \`array<object>\` | **Yes** | Array of question objects (defined below) |
+
+### 2. Question Item Schema
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| \`id\` | \`string\` | **Yes** | Unique ID within the dataset (e.g. \`"q_01"\`) |
+| \`order\` | \`number\` | No | Sequence index (1, 2, 3...) |
+| \`type\` | \`string\` | **Yes** | Question type: \`flashcard\`, \`single_choice\`, \`multiple_choice\`, \`true_false\`, \`open_ended\` |
+| \`difficulty\` | \`number\` | No | Rating from 1 (Easy) to 5 (Hard) |
+| \`tags\` | \`array<string>\` | No | Specific topic tags for this question |
+| \`content\` | \`object\` | **Yes** | Must contain \`{ "text": "Question prompt here" }\` and option list if choice-based |
+| \`answer\` | \`object\` | **Yes** | Structure depends on \`type\` (see examples below) |
+
+---
+
+## \u{1F4DD} Question Type Examples & Templates
+
+### 1. Flashcard (\`flashcard\`)
+- \`content.text\`: Front side of card (Question / Prompt)
+- \`answer.back\`: Back side of card (Explanation / Answer)
+
+\`\`\`json
+{
+  "id": "q_fc_01",
+  "order": 1,
+  "type": "flashcard",
+  "difficulty": 2,
+  "tags": ["Networking", "OSI"],
+  "content": {
+    "text": "What is the primary function of the OSI Network Layer (Layer 3)?"
+  },
+  "answer": {
+    "back": "The Network Layer is responsible for packet forwarding including routing through intermediate routers."
+  }
+}
+\`\`\`
+
+### 2. Single Choice (\`single_choice\`)
+- \`content.text\`: Question prompt
+- \`content.options\`: Array of string options
+- \`answer.correct\`: 0-based index of correct option
+
+\`\`\`json
+{
+  "id": "q_sc_01",
+  "order": 2,
+  "type": "single_choice",
+  "difficulty": 1,
+  "tags": ["Protocols"],
+  "content": {
+    "text": "Which port is used by standard HTTPS by default?",
+    "options": ["80", "443", "22", "8080"]
+  },
+  "answer": {
+    "correct": 1
+  }
+}
+\`\`\`
+
+### 3. Multiple Choice (\`multiple_choice\`)
+- \`content.text\`: Question prompt
+- \`content.options\`: Array of string options
+- \`answer.correct\`: Array of 0-based indices of correct options
+
+\`\`\`json
+{
+  "id": "q_mc_01",
+  "order": 3,
+  "type": "multiple_choice",
+  "difficulty": 3,
+  "tags": ["Protocols"],
+  "content": {
+    "text": "Which of the following protocols operate at the Transport Layer (Layer 4)?",
+    "options": ["TCP", "IP", "UDP", "HTTP"]
+  },
+  "answer": {
+    "correct": [0, 2]
+  }
+}
+\`\`\`
+
+### 4. True / False (\`true_false\`)
+- \`content.text\`: Statement
+- \`answer.correct\`: Boolean \`true\` or \`false\`
+
+\`\`\`json
+{
+  "id": "q_tf_01",
+  "order": 4,
+  "type": "true_false",
+  "difficulty": 1,
+  "tags": ["Security"],
+  "content": {
+    "text": "UDP provides connection-oriented reliable transmission with error checking."
+  },
+  "answer": {
+    "correct": false
+  }
+}
+\`\`\`
+
+### 5. Open Ended / Text Input (\`open_ended\` / \`text_input\`)
+- \`content.text\`: Question prompt
+- \`answer.text\`: Reference answer string
+
+\`\`\`json
+{
+  "id": "q_oe_01",
+  "order": 5,
+  "type": "open_ended",
+  "difficulty": 3,
+  "tags": ["Storage"],
+  "content": {
+    "text": "Explain the difference between RAID 0 and RAID 1 in terms of redundancy."
+  },
+  "answer": {
+    "text": "RAID 0 offers striping without redundancy (data loss if one disk fails). RAID 1 offers mirroring with 100% data redundancy."
+  }
+}
+\`\`\`
+
+---
+
+## \u26A1 Complete Dataset JSON Template
+
+\`\`\`json
+{
+  "id": "sample-dataset-uuid-001",
+  "name": "Sample ExamApp Dataset",
+  "description": "Example question pool for testing and AI generation reference.",
+  "target_version": "1.0.0",
+  "categories": ["General Knowledge", "IT Basics"],
+  "questions": [
+    {
+      "id": "q_01",
+      "order": 1,
+      "type": "flashcard",
+      "difficulty": 2,
+      "tags": ["Basics"],
+      "content": {
+        "text": "What is ExamApp?"
+      },
+      "answer": {
+        "back": "ExamApp is an open-source web application for interactive studying and question management."
+      }
+    }
+  ]
+}
+\`\`\`
+
+---
+
+## \u{1F916} AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
+
+You can copy and paste the following prompt into any AI assistant to automatically generate valid ExamApp question datasets:
+
+\`\`\`text
+Please generate a valid ExamApp dataset JSON file for the topic: [YOUR TOPIC HERE].
+
+Strict Requirements:
+1. Root JSON must contain: "id" (UUID string), "name" (Topic Title), "description", "categories" (array), and "questions" (array).
+2. Each question object inside "questions" MUST have:
+   - "id": string (unique ID e.g. "q_01")
+   - "order": number starting from 1
+   - "type": "flashcard" | "single_choice" | "multiple_choice" | "true_false" | "open_ended"
+   - "difficulty": number from 1 to 5
+   - "tags": array of strings
+   - "content": object with "text" string (and "options" array if single_choice/multiple_choice)
+   - "answer": object ("back" for flashcards, "correct" index or boolean for choices, "text" for open_ended)
+3. Return ONLY valid JSON, wrapped in \`\`\`json \`\`\` code block.
+\`\`\`
+
+---
+
+## \u{1F517} Related Resources
+- \u{1F4E6} **ExamApp Main GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+- \u{1F4CA} **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+`;
+  const existingFile = app.vault.getAbstractFileByPath(aboutFilePath);
+  if (existingFile instanceof import_obsidian3.TFile) {
+    try {
+      const currentContent = await app.vault.read(existingFile);
+      if (currentContent !== markdown) {
+        await app.vault.modify(existingFile, markdown);
+      }
+    } catch (e) {
+      console.error(`[ExamApp Sync] Failed to update About file: ${aboutFilePath}`, e);
+    }
+  } else {
+    try {
+      await app.vault.create(aboutFilePath, markdown);
+    } catch (e) {
+      console.error(`[ExamApp Sync] Failed to create About file: ${aboutFilePath}`, e);
     }
   }
 }
