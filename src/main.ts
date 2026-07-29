@@ -3,9 +3,11 @@ import { ExamAppGistSyncSettings, DEFAULT_SETTINGS, ExamAppGistSyncSettingTab } 
 import { fetchGistData, pushGistData } from './gistSync';
 import { mergeSyncData } from './dataMerger';
 import { scanLocalSources, writeLocalSources } from './fileScanner';
+import { generateMarkdownSummary } from './markdownGenerator';
 
 // Infinity Sync Icon matching Obsidian minimalist line-art design
 const INFINITY_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 12,12 C 8.5,16.5 4,17 2.5,14.5 C 1,12 2.5,8 6.5,8.5 C 10.5,9 13.5,14.5 17.5,15.5 C 21.5,16.5 23,12.5 21.5,10 C 20,7.5 16,7.5 12,12"/><path d="M 17,6.5 L 21.5,10 L 21,5.5"/><path d="M 7,17.5 L 2.5,14.5 L 3,19"/></svg>`;
+
 
 export default class ExamAppGistSyncPlugin extends Plugin {
 	settings: ExamAppGistSyncSettings;
@@ -76,6 +78,9 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 
 			// 5. Update local JSON files to reflect the final merged state
 			await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
+
+			// 6. Generate/update Markdown summary dashboard (examApp_data.md)
+			await generateMarkdownSummary(this.app, this.settings.localFolderPath, mergedData.sources, 'Success');
 
 			if (this.settings.showNotifications) {
 				new Notice(`[ExamApp Sync] Senkronizasyon tamamlandı (${mergedData.sources.length} havuz senkronize edildi).`);

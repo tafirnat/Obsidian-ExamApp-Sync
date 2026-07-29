@@ -1,7 +1,9 @@
 import { App, PluginSettingTab, Setting, Notice } from 'obsidian';
 import ExamAppGistSyncPlugin from './main';
 import { fetchGitHubUser, findExamAppGist, createExamAppGist } from './githubApi';
-import { scanLocalSources } from './fileScanner';
+import { scanLocalSources, writeLocalSources, cleanupOldDirectory } from './fileScanner';
+import { generateMarkdownSummary } from './markdownGenerator';
+
 
 export interface ExamAppGistSyncSettings {
 	githubToken: string;
@@ -298,13 +300,43 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Klasör Yolu')
-			.setDesc('Senkronize edilecek JSON dosyalarının bulunduğu Vault içi klasör. (Varsayılan: "ExamApp Sync")')
+			.setDesc('Senkronize edilecek JSON dosyalarının ve examApp_data.md özet panosunun bulunduğu Vault içi klasör.')
 			.addText(text => text
 				.setPlaceholder('ExamApp Sync')
 				.setValue(this.plugin.settings.localFolderPath)
 				.onChange(async (val) => {
-					this.plugin.settings.localFolderPath = val.trim() || 'ExamApp Sync';
+					const oldFolderPath = this.plugin.settings.localFolderPath;
+					const newFolderPath = val.trim() || 'ExamApp Sync';
+
+					if (oldFolderPath === newFolderPath) {
+						return;
+					}
+
+					// 1. Scan existing dataset sources in old directory before cleanup
+					let sources = await scanLocalSources(this.app, oldFolderPath);
+
+					// 2. Perform garbage collection in old directory
+					const deletedCount = await cleanupOldDirectory(this.app, oldFolderPath, newFolderPath);
+
+					// 3. Update settings with new path
+					this.plugin.settings.localFolderPath = newFolderPath;
 					await this.plugin.saveSettings();
+
+					// 4. If sources existed in new path, also include them
+					const newFolderSources = await scanLocalSources(this.app, newFolderPath);
+					if (sources.length === 0 && newFolderSources.length > 0) {
+						sources = newFolderSources;
+					}
+
+					// 5. Write sources & generate dashboard in new directory
+					if (sources.length > 0) {
+						await writeLocalSources(this.app, newFolderPath, sources);
+					}
+					await generateMarkdownSummary(this.app, newFolderPath, sources, 'Success');
+
+					if (this.plugin.settings.showNotifications) {
+						new Notice(`[ExamApp Sync] Klasör değiştirildi. Eski konumdan ${deletedCount} dosya temizlendi, veriler "${newFolderPath}" klasörüne taşındı.`);
+					}
 				})
 			);
 

@@ -61,3 +61,56 @@ export async function writeLocalSources(app: App, folderPath: string, sources: a
         }
     }
 }
+
+export async function cleanupOldDirectory(app: App, oldFolderPath: string, newFolderPath: string): Promise<number> {
+    if (!oldFolderPath || oldFolderPath.trim() === '' || oldFolderPath === newFolderPath) {
+        return 0;
+    }
+
+    const oldFolder = app.vault.getAbstractFileByPath(oldFolderPath);
+    if (!oldFolder || !(oldFolder instanceof TFolder)) {
+        return 0;
+    }
+
+    let deletedCount = 0;
+    // Collect children to avoid mutation issues during iteration
+    const children = [...oldFolder.children];
+
+    for (const child of children) {
+        if (!(child instanceof TFile)) continue;
+
+        if (child.name === 'examApp_data.md') {
+            try {
+                await app.vault.delete(child);
+                deletedCount++;
+            } catch (err) {
+                console.error(`[ExamApp Sync] Failed to delete summary file in old directory (${child.path}):`, err);
+            }
+        } else if (child.extension === 'json') {
+            try {
+                const content = await app.vault.read(child);
+                const data = JSON.parse(content);
+                const { isExamAppSource } = validateExamSchema(data);
+
+                if (isExamAppSource) {
+                    await app.vault.delete(child);
+                    deletedCount++;
+                }
+            } catch (err) {
+                console.error(`[ExamApp Sync] Failed during garbage collection of file (${child.path}):`, err);
+            }
+        }
+    }
+
+    // Delete directory if empty
+    if (oldFolder.children.length === 0) {
+        try {
+            await app.vault.delete(oldFolder);
+        } catch (err) {
+            console.warn(`[ExamApp Sync] Could not delete empty old directory (${oldFolderPath}):`, err);
+        }
+    }
+
+    return deletedCount;
+}
+
