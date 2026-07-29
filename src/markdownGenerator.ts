@@ -11,7 +11,29 @@ function getDatasetFilename(source: any): string {
 }
 
 /**
- * Generates and updates ExamApp_Overview.md in the target dataset directory.
+ * Resolves parent folder path and relative dataset subfolder name.
+ */
+function getSummaryLocation(folderPath: string): { parentFolderPath: string; relativeSubfolder: string } {
+    const normalized = folderPath.replace(/\\/g, '/').replace(/\/+$/, '');
+    const lastSlashIndex = normalized.lastIndexOf('/');
+    
+    if (lastSlashIndex > 0) {
+        const parentFolderPath = normalized.substring(0, lastSlashIndex);
+        const relativeSubfolder = normalized.substring(lastSlashIndex + 1);
+        return {
+            parentFolderPath,
+            relativeSubfolder
+        };
+    }
+    
+    return {
+        parentFolderPath: normalized,
+        relativeSubfolder: ''
+    };
+}
+
+/**
+ * Generates and updates 00_ExamApp_Overview.md in the parent folder of the dataset directory.
  */
 export async function generateMarkdownSummary(
     app: App,
@@ -19,27 +41,17 @@ export async function generateMarkdownSummary(
     sources: any[],
     syncStatus: string = 'Success'
 ): Promise<void> {
-    const summaryFilePath = `${folderPath}/ExamApp_Overview.md`;
-    const legacyFilePath = `${folderPath}/examApp_data.md`;
+    const { parentFolderPath, relativeSubfolder } = getSummaryLocation(folderPath);
+    const summaryFilePath = `${parentFolderPath}/00_ExamApp_Overview.md`;
 
-    // Ensure target folder exists
-    let targetFolder = app.vault.getAbstractFileByPath(folderPath);
+    // Ensure parent folder exists
+    let targetFolder = app.vault.getAbstractFileByPath(parentFolderPath);
     if (!targetFolder || !(targetFolder instanceof TFolder)) {
         try {
-            await app.vault.createFolder(folderPath);
+            await app.vault.createFolder(parentFolderPath);
         } catch (e) {
-            console.error(`[ExamApp Sync] Failed to create directory for summary: ${folderPath}`, e);
+            console.error(`[ExamApp Sync] Failed to create directory for summary: ${parentFolderPath}`, e);
             return;
-        }
-    }
-
-    // Clean up legacy examApp_data.md file if present
-    const legacyFile = app.vault.getAbstractFileByPath(legacyFilePath);
-    if (legacyFile instanceof TFile) {
-        try {
-            await app.vault.delete(legacyFile);
-        } catch (e) {
-            console.warn(`[ExamApp Sync] Could not delete legacy summary file (${legacyFilePath}):`, e);
         }
     }
 
@@ -56,7 +68,7 @@ export async function generateMarkdownSummary(
 
     const formattedSyncTime = now.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:mm:ss
 
-    // Header & Content (100% English, no YAML frontmatter to prevent Obsidian localized Properties panel)
+    // Header & Content (100% English, no YAML frontmatter to prevent localized Properties panel)
     let markdown = `# 📊 ExamApp Datasets & Sync Overview
 
 > [!abstract] System Overview
@@ -76,6 +88,7 @@ export async function generateMarkdownSummary(
         sources.forEach(s => {
             const title = s.name || s.exam_metadata?.title || s.title || s.id || 'Untitled Dataset';
             const fileName = getDatasetFilename(s);
+            const relativeFilePath = relativeSubfolder ? `${relativeSubfolder}/${fileName}` : fileName;
             const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
             const appVersion = s.target_version || s.version || s.exam_metadata?.version || 'N/A';
             
@@ -103,7 +116,7 @@ export async function generateMarkdownSummary(
             const safeFileName = fileName.replace(/\|/g, '\\|');
             const safeCategories = categories.replace(/\|/g, '\\|');
 
-            markdown += `| **${safeTitle}** | [[${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
+            markdown += `| **${safeTitle}** | [[${relativeFilePath}|${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
         });
     }
 

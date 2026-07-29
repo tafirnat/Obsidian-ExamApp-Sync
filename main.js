@@ -261,24 +261,32 @@ function getDatasetFilename(source) {
   const shortId = (source.id || "00000000").substring(0, 8);
   return `${safeName}_${shortId}.json`;
 }
+function getSummaryLocation(folderPath) {
+  const normalized = folderPath.replace(/\\/g, "/").replace(/\/+$/, "");
+  const lastSlashIndex = normalized.lastIndexOf("/");
+  if (lastSlashIndex > 0) {
+    const parentFolderPath = normalized.substring(0, lastSlashIndex);
+    const relativeSubfolder = normalized.substring(lastSlashIndex + 1);
+    return {
+      parentFolderPath,
+      relativeSubfolder
+    };
+  }
+  return {
+    parentFolderPath: normalized,
+    relativeSubfolder: ""
+  };
+}
 async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "Success") {
-  const summaryFilePath = `${folderPath}/ExamApp_Overview.md`;
-  const legacyFilePath = `${folderPath}/examApp_data.md`;
-  let targetFolder = app.vault.getAbstractFileByPath(folderPath);
+  const { parentFolderPath, relativeSubfolder } = getSummaryLocation(folderPath);
+  const summaryFilePath = `${parentFolderPath}/00_ExamApp_Overview.md`;
+  let targetFolder = app.vault.getAbstractFileByPath(parentFolderPath);
   if (!targetFolder || !(targetFolder instanceof import_obsidian3.TFolder)) {
     try {
-      await app.vault.createFolder(folderPath);
+      await app.vault.createFolder(parentFolderPath);
     } catch (e) {
-      console.error(`[ExamApp Sync] Failed to create directory for summary: ${folderPath}`, e);
+      console.error(`[ExamApp Sync] Failed to create directory for summary: ${parentFolderPath}`, e);
       return;
-    }
-  }
-  const legacyFile = app.vault.getAbstractFileByPath(legacyFilePath);
-  if (legacyFile instanceof import_obsidian3.TFile) {
-    try {
-      await app.vault.delete(legacyFile);
-    } catch (e) {
-      console.warn(`[ExamApp Sync] Could not delete legacy summary file (${legacyFilePath}):`, e);
     }
   }
   const now = /* @__PURE__ */ new Date();
@@ -310,6 +318,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
       var _a, _b, _c;
       const title = s.name || ((_a = s.exam_metadata) == null ? void 0 : _a.title) || s.title || s.id || "Untitled Dataset";
       const fileName = getDatasetFilename(s);
+      const relativeFilePath = relativeSubfolder ? `${relativeSubfolder}/${fileName}` : fileName;
       const qCount = Array.isArray(s.questions) ? s.questions.length : 0;
       const appVersion = s.target_version || s.version || ((_b = s.exam_metadata) == null ? void 0 : _b.version) || "N/A";
       let categories = "-";
@@ -332,7 +341,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
       const safeTitle = title.replace(/\|/g, "\\|");
       const safeFileName = fileName.replace(/\|/g, "\\|");
       const safeCategories = categories.replace(/\|/g, "\\|");
-      markdown += `| **${safeTitle}** | [[${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
+      markdown += `| **${safeTitle}** | [[${relativeFilePath}|${safeFileName}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
 `;
     });
   }
