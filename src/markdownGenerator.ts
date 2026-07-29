@@ -340,22 +340,38 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ## 🤖 AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
 
-You can copy and paste the following prompt into any AI assistant to automatically generate valid ExamApp question datasets:
+You can copy and paste the following prompt into any AI assistant to automatically generate valid ExamApp question datasets matching the official open-source schema:
 
 \`\`\`text
-Please generate a valid ExamApp dataset JSON file for the topic: [YOUR TOPIC HERE].
+You are an expert AI dataset generator for ExamApp (Open Source Repository: https://github.com/tafirnat/exam-app).
+Please generate a valid, high-quality ExamApp dataset JSON file for the topic: [YOUR TOPIC HERE].
 
-Strict Requirements:
-1. Root JSON must contain: "id" (UUID string), "name" (Topic Title), "description", "categories" (array), and "questions" (array).
-2. Each question object inside "questions" MUST have:
-   - "id": string (unique ID e.g. "q_01")
+Context & Repository Reference:
+- GitHub Repository: https://github.com/tafirnat/exam-app
+- App Version Compatibility: 1.0.0
+
+Strict Schema Requirements:
+1. Root JSON must contain:
+   - "id": UUID string (e.g. "a1b2c3d4-e5f6-7890-abcd-1234567890ab")
+   - "name": Topic Title (string)
+   - "description": Brief overview of the topic / question set
+   - "target_version": "1.0.0"
+   - "categories": array of topic category strings
+   - "questions": array of question objects
+2. Each item in "questions" MUST have:
+   - "id": string (unique ID within dataset, e.g. "q_01")
    - "order": number starting from 1
    - "type": "flashcard" | "single_choice" | "multiple_choice" | "true_false" | "open_ended"
-   - "difficulty": number from 1 to 5
+   - "difficulty": number (1 = Easy to 5 = Hard)
    - "tags": array of strings
-   - "content": object with "text" string (and "options" array if single_choice/multiple_choice)
-   - "answer": object ("back" for flashcards, "correct" index or boolean for choices, "text" for open_ended)
-3. Return ONLY valid JSON, wrapped in \`\`\`json \`\`\` code block.
+   - "content": object containing:
+     - "text": question prompt / statement
+     - "options": array of string choices (ONLY for "single_choice" and "multiple_choice")
+   - "answer": object containing:
+     - "back": explanation string (ONLY for "flashcard")
+     - "correct": 0-based index (single_choice), array of indices (multiple_choice), or boolean (true_false)
+     - "text": reference answer string (ONLY for "open_ended")
+3. Return ONLY valid JSON, wrapped inside a \`\`\`json ... \`\`\` code block.
 \`\`\`
 
 ---
