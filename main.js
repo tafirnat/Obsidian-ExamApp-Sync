@@ -25,10 +25,10 @@ __export(main_exports, {
   default: () => ExamAppGistSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/settings.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/githubApi.ts
 var import_obsidian = require("obsidian");
@@ -632,6 +632,103 @@ Strict Schema Requirements:
   }
 }
 
+// src/updateChecker.ts
+var import_obsidian4 = require("obsidian");
+function isNewerVersion(remoteVer, currentVer) {
+  const r = remoteVer.replace(/^v/, "").split(".").map(Number);
+  const c = currentVer.replace(/^v/, "").split(".").map(Number);
+  for (let i = 0; i < Math.max(r.length, c.length); i++) {
+    const rv = r[i] || 0;
+    const cv = c[i] || 0;
+    if (rv > cv) return true;
+    if (rv < cv) return false;
+  }
+  return false;
+}
+async function checkForUpdates(plugin, isManual = false) {
+  const now = Date.now();
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1e3;
+  if (!isManual) {
+    if (!plugin.settings.autoCheckUpdates) return;
+    if (now - plugin.settings.lastUpdateCheckTimestamp < TWENTY_FOUR_HOURS) return;
+  }
+  if (isManual && plugin.settings.showNotifications) {
+    new import_obsidian4.Notice("[ExamApp Sync] Eklenti g\xFCncellemeleri kontrol ediliyor...");
+  }
+  try {
+    plugin.settings.lastUpdateCheckTimestamp = now;
+    await plugin.saveSettings();
+    const currentVersion = plugin.manifest.version;
+    let latestVersion = "";
+    let downloadUrlMainJs = "";
+    let downloadUrlManifest = "";
+    try {
+      const releaseRes = await (0, import_obsidian4.requestUrl)({
+        url: "https://api.github.com/repos/tafirnat/obsidian-examapp-gist-sync/releases/latest",
+        headers: { "User-Agent": "Obsidian-ExamApp-Sync-Plugin" }
+      });
+      if (releaseRes.status === 200) {
+        const releaseData = releaseRes.json;
+        latestVersion = (releaseData.tag_name || releaseData.name || "").replace(/^v/, "");
+        const assets = releaseData.assets || [];
+        const mainJsAsset = assets.find((a) => a.name === "main.js");
+        const manifestAsset = assets.find((a) => a.name === "manifest.json");
+        if (mainJsAsset) downloadUrlMainJs = mainJsAsset.browser_download_url;
+        if (manifestAsset) downloadUrlManifest = manifestAsset.browser_download_url;
+      }
+    } catch (e) {
+      console.log("[ExamApp Sync] Release API unavailable or no release tagged, checking raw main branch.");
+    }
+    if (!latestVersion) {
+      try {
+        const rawManifestRes = await (0, import_obsidian4.requestUrl)({
+          url: "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/manifest.json"
+        });
+        if (rawManifestRes.status === 200) {
+          const remoteManifest = rawManifestRes.json;
+          latestVersion = remoteManifest.version;
+          downloadUrlMainJs = "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/main.js";
+          downloadUrlManifest = "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/manifest.json";
+        }
+      } catch (e) {
+        console.log("[ExamApp Sync] Raw GitHub main branch unreachable.");
+      }
+    }
+    if (!latestVersion) {
+      if (isManual && plugin.settings.showNotifications) {
+        new import_obsidian4.Notice("[ExamApp Sync] G\xFCncelleme sunucusuna ula\u015F\u0131lamad\u0131 veya s\xFCr\xFCm bulunamad\u0131.");
+      }
+      return;
+    }
+    if (isNewerVersion(latestVersion, currentVersion)) {
+      new import_obsidian4.Notice(`[ExamApp Sync] Yeni g\xFCncelleme mevcut: v${latestVersion} (Mevcut: v${currentVersion})`);
+      if (plugin.settings.autoInstallUpdates && downloadUrlMainJs && downloadUrlManifest) {
+        new import_obsidian4.Notice("[ExamApp Sync] Yeni eklenti dosyalar\u0131 indiriliyor...");
+        const mainJsRes = await (0, import_obsidian4.requestUrl)({ url: downloadUrlMainJs });
+        const manifestRes = await (0, import_obsidian4.requestUrl)({ url: downloadUrlManifest });
+        if (mainJsRes.status === 200 && manifestRes.status === 200) {
+          const pluginDir = plugin.manifest.dir;
+          if (pluginDir) {
+            const adapter = plugin.app.vault.adapter;
+            await adapter.write(`${pluginDir}/main.js`, mainJsRes.text);
+            await adapter.write(`${pluginDir}/manifest.json`, manifestRes.text);
+            new import_obsidian4.Notice(`[ExamApp Sync] Eklenti v${latestVersion} s\xFCr\xFCm\xFCne g\xFCncellendi! L\xFCtfen eklentiyi veya Obsidian'\u0131 yeniden ba\u015Flat\u0131n.`);
+          }
+        }
+      }
+    } else {
+      if (isManual && plugin.settings.showNotifications) {
+        new import_obsidian4.Notice(`[ExamApp Sync] Eklentiniz g\xFCncel! (v${currentVersion})`);
+      }
+    }
+  } catch (err) {
+    console.error("[ExamApp Sync] G\xFCncelleme kontrol\xFC hatas\u0131:", err);
+    if (isManual && plugin.settings.showNotifications) {
+      new import_obsidian4.Notice(`[ExamApp Sync] G\xFCncelleme kontrol\xFC hatas\u0131: ${err.message}`);
+    }
+  }
+}
+
 // src/settings.ts
 var DEFAULT_SETTINGS = {
   githubToken: "",
@@ -639,7 +736,10 @@ var DEFAULT_SETTINGS = {
   localFolderPath: "ExamApp Sync",
   githubUsername: "",
   autoSyncOnStartup: false,
-  showNotifications: true
+  showNotifications: true,
+  autoCheckUpdates: true,
+  lastUpdateCheckTimestamp: 0,
+  autoInstallUpdates: true
 };
 var ICONS = {
   github: `<svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>`,
@@ -651,9 +751,10 @@ var ICONS = {
   checkBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
   alertBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   externalLink: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
-  shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`
+  shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+  refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`
 };
-var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab {
+var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
     this.plugin = plugin;
@@ -676,20 +777,20 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
       statusEl.innerHTML = `${ICONS.github}<strong>Ba\u011Fl\u0131 Hesap:</strong> @${this.plugin.settings.githubUsername} <span style="color: var(--text-success); font-weight: bold; margin-left: 8px;">${ICONS.checkBadge}Aktif</span>`;
       statusEl.style.fontSize = "1.05em";
       statusEl.style.marginBottom = "12px";
-      new import_obsidian4.Setting(accountCard).setName("Oturumu Kapat").setDesc("GitHub ba\u011Flant\u0131s\u0131n\u0131 ve kaydedilen Gist kimli\u011Fini kald\u0131r\u0131r.").addButton(
+      new import_obsidian5.Setting(accountCard).setName("Oturumu Kapat").setDesc("GitHub ba\u011Flant\u0131s\u0131n\u0131 ve kaydedilen Gist kimli\u011Fini kald\u0131r\u0131r.").addButton(
         (button) => button.setButtonText("Oturumu Kapat").setWarning().onClick(async () => {
           this.plugin.settings.githubToken = "";
           this.plugin.settings.githubUsername = "";
           this.plugin.settings.gistId = "";
           await this.plugin.saveSettings();
-          new import_obsidian4.Notice("[ExamApp Sync] GitHub oturumu kapat\u0131ld\u0131.");
+          new import_obsidian5.Notice("[ExamApp Sync] GitHub oturumu kapat\u0131ld\u0131.");
           this.display();
         })
       );
     } else {
       let inputToken = "";
       let showInfo = false;
-      const loginSetting = new import_obsidian4.Setting(containerEl);
+      const loginSetting = new import_obsidian5.Setting(containerEl);
       const nameEl = loginSetting.nameEl;
       nameEl.innerHTML = `GitHub Personal Access Token (PAT) ${ICONS.info}`;
       loginSetting.setDesc('GitHub hesab\u0131n\u0131zdan al\u0131nan ("gist" yetkisine sahip) token. Oturum a\xE7\u0131ld\u0131\u011F\u0131nda senkronizasyon otomatik ba\u015Flar.');
@@ -760,7 +861,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
         button.onClick(async () => {
           const tokenToUse = inputToken || this.plugin.settings.githubToken;
           if (!tokenToUse) {
-            new import_obsidian4.Notice("[ExamApp Sync] L\xFCtfen bir GitHub PAT token girin.");
+            new import_obsidian5.Notice("[ExamApp Sync] L\xFCtfen bir GitHub PAT token girin.");
             return;
           }
           button.setDisabled(true);
@@ -775,12 +876,12 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
             }
             this.plugin.settings.gistId = detectedGistId;
             await this.plugin.saveSettings();
-            new import_obsidian4.Notice(`[ExamApp Sync] Ho\u015F geldiniz @${user.login}! Oturum a\xE7\u0131ld\u0131. Senkronizasyon ba\u015Flat\u0131l\u0131yor...`);
+            new import_obsidian5.Notice(`[ExamApp Sync] Ho\u015F geldiniz @${user.login}! Oturum a\xE7\u0131ld\u0131. Senkronizasyon ba\u015Flat\u0131l\u0131yor...`);
             await this.plugin.syncWithGist();
             this.display();
           } catch (err) {
             console.error("[ExamApp Login Error]", err);
-            new import_obsidian4.Notice(`[ExamApp Sync] Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
+            new import_obsidian5.Notice(`[ExamApp Sync] Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
           } finally {
             button.setDisabled(false);
             button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum A\xE7`;
@@ -806,20 +907,20 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
         infoEl.style.color = "var(--text-accent)";
         infoEl.style.marginBottom = "10px";
       }
-      new import_obsidian4.Setting(gistCard).setName("Gist Otomatik Yeniden Tara / Olu\u015Ftur").setDesc("Hesab\u0131n\u0131zdaki ExamApp Gist varl\u0131\u011F\u0131n\u0131 tarar veya yoksa otomatik olu\u015Fturur.").addButton(
+      new import_obsidian5.Setting(gistCard).setName("Gist Otomatik Yeniden Tara / Olu\u015Ftur").setDesc("Hesab\u0131n\u0131zdaki ExamApp Gist varl\u0131\u011F\u0131n\u0131 tarar veya yoksa otomatik olu\u015Fturur.").addButton(
         (btn) => btn.setButtonText("Yeniden Tara").onClick(async () => {
           try {
             const id = await findExamAppGist(this.plugin.settings.githubToken);
             if (id) {
               this.plugin.settings.gistId = id;
               await this.plugin.saveSettings();
-              new import_obsidian4.Notice("[ExamApp Sync] ExamApp Gist ba\u015Far\u0131yla tespit edildi.");
+              new import_obsidian5.Notice("[ExamApp Sync] ExamApp Gist ba\u015Far\u0131yla tespit edildi.");
               this.display();
             } else {
-              new import_obsidian4.Notice("[ExamApp Sync] Hesab\u0131n\u0131zda hen\xFCz ExamApp Gist bulunamad\u0131.");
+              new import_obsidian5.Notice("[ExamApp Sync] Hesab\u0131n\u0131zda hen\xFCz ExamApp Gist bulunamad\u0131.");
             }
           } catch (e) {
-            new import_obsidian4.Notice(`[ExamApp Sync] Taramada hata: ${e.message}`);
+            new import_obsidian5.Notice(`[ExamApp Sync] Taramada hata: ${e.message}`);
           }
         })
       ).addButton(
@@ -828,10 +929,10 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
             const newId = await createExamAppGist(this.plugin.settings.githubToken);
             this.plugin.settings.gistId = newId;
             await this.plugin.saveSettings();
-            new import_obsidian4.Notice("[ExamApp Sync] Yeni ExamApp Gist olu\u015Fturuldu ve ba\u011Fland\u0131.");
+            new import_obsidian5.Notice("[ExamApp Sync] Yeni ExamApp Gist olu\u015Fturuldu ve ba\u011Fland\u0131.");
             this.display();
           } catch (e) {
-            new import_obsidian4.Notice(`[ExamApp Sync] Gist olu\u015Fturma hatas\u0131: ${e.message}`);
+            new import_obsidian5.Notice(`[ExamApp Sync] Gist olu\u015Fturma hatas\u0131: ${e.message}`);
           }
         })
       );
@@ -842,7 +943,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
       summaryEl.innerHTML = `${ICONS.sliders} Geli\u015Fmi\u015F: Manuel Gist ID D\xFCzenleme`;
       summaryEl.style.color = "var(--text-muted)";
       summaryEl.style.fontWeight = "bold";
-      new import_obsidian4.Setting(detailsEl).setName("Manuel Gist ID (\xD6zel)").setDesc("Gist ID otomatik tespit edilir. Yaln\u0131zca \xF6zel bir Gist ID zorlamak istiyorsan\u0131z de\u011Fi\u015Ftirin.").addText(
+      new import_obsidian5.Setting(detailsEl).setName("Manuel Gist ID (\xD6zel)").setDesc("Gist ID otomatik tespit edilir. Yaln\u0131zca \xF6zel bir Gist ID zorlamak istiyorsan\u0131z de\u011Fi\u015Ftirin.").addText(
         (text) => text.setPlaceholder("e.g. 1a2b3c4d5e6f7g8h9i0j").setValue(this.plugin.settings.gistId).onChange(async (val) => {
           this.plugin.settings.gistId = val.trim();
           await this.plugin.saveSettings();
@@ -851,7 +952,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
     }
     const folderHeader = containerEl.createEl("h3");
     folderHeader.innerHTML = `${ICONS.folder}Vault Senkronizasyon Klas\xF6r\xFC`;
-    new import_obsidian4.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc("Senkronize edilecek JSON dosyalar\u0131n\u0131n ve ExamApp_Overview.md \xF6zet panosunun bulundu\u011Fu Vault i\xE7i klas\xF6r.").addText(
+    new import_obsidian5.Setting(containerEl).setName("Klas\xF6r Yolu").setDesc("Senkronize edilecek JSON dosyalar\u0131n\u0131n ve ExamApp_Overview.md \xF6zet panosunun bulundu\u011Fu Vault i\xE7i klas\xF6r.").addText(
       (text) => text.setPlaceholder("ExamApp Sync").setValue(this.plugin.settings.localFolderPath).onChange(async (val) => {
         const oldFolderPath = this.plugin.settings.localFolderPath;
         const newFolderPath = val.trim() || "ExamApp Sync";
@@ -871,7 +972,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
         }
         await generateMarkdownSummary(this.app, newFolderPath, sources, "Success");
         if (this.plugin.settings.showNotifications) {
-          new import_obsidian4.Notice(`[ExamApp Sync] Klas\xF6r de\u011Fi\u015Ftirildi. Eski konumdan ${deletedCount} dosya temizlendi, veriler "${newFolderPath}" klas\xF6r\xFCne ta\u015F\u0131nd\u0131.`);
+          new import_obsidian5.Notice(`[ExamApp Sync] Klas\xF6r de\u011Fi\u015Ftirildi. Eski konumdan ${deletedCount} dosya temizlendi, veriler "${newFolderPath}" klas\xF6r\xFCne ta\u015F\u0131nd\u0131.`);
         }
       })
     );
@@ -883,31 +984,57 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian4.PluginSettingTab 
     schemaInfoBox.style.marginBottom = "12px";
     schemaInfoBox.style.fontSize = "0.92em";
     schemaInfoBox.innerHTML = `${ICONS.shield} <strong>\u015Eema G\xFCvenlik Filtresi:</strong> Bu klas\xF6r i\xE7erisindeki dosyalar taran\u0131rken sadece ge\xE7erli ExamApp soru \u015Femas\u0131na (<code>{ id, questions: [...] }</code>) sahip <code>.json</code> dosyalar\u0131 i\u015Flenir. Di\u011Fer uyumsuz JSON veya not dosyalar\u0131 g\xFCvenle atlan\u0131r.`;
-    new import_obsidian4.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton(
+    new import_obsidian5.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton(
       (btn) => btn.setButtonText("\u015Eimdi Tara ve Do\u011Frula").onClick(async () => {
         const sources = await scanLocalSources(this.app, this.plugin.settings.localFolderPath);
-        new import_obsidian4.Notice(`[ExamApp Sync] Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
+        new import_obsidian5.Notice(`[ExamApp Sync] Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
       })
     );
     const settingsHeader = containerEl.createEl("h3");
     settingsHeader.innerHTML = `${ICONS.sliders}Genel Otomasyon Ayarlar\u0131`;
-    new import_obsidian4.Setting(containerEl).setName("Obsidian A\xE7\u0131l\u0131\u015F\u0131nda Otomatik Senkronize Et").setDesc("Obsidian ba\u015Flat\u0131ld\u0131\u011F\u0131nda Gist senkronizasyonunu arka planda otomatik olarak tetikler.").addToggle(
+    new import_obsidian5.Setting(containerEl).setName("Obsidian A\xE7\u0131l\u0131\u015F\u0131nda Otomatik Senkronize Et").setDesc("Obsidian ba\u015Flat\u0131ld\u0131\u011F\u0131nda Gist senkronizasyonunu arka planda otomatik olarak tetikler.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.autoSyncOnStartup).onChange(async (val) => {
         this.plugin.settings.autoSyncOnStartup = val;
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian4.Setting(containerEl).setName("Senkronizasyon Bildirimlerini G\xF6ster").setDesc("Senkronizasyon ba\u015Flad\u0131\u011F\u0131nda ve tamamland\u0131\u011F\u0131nda ekranda bilgi bildirimleri (toast Notice) g\xF6sterir.").addToggle(
+    new import_obsidian5.Setting(containerEl).setName("Senkronizasyon Bildirimlerini G\xF6ster").setDesc("Senkronizasyon ba\u015Flad\u0131\u011F\u0131nda ve tamamland\u0131\u011F\u0131nda ekranda bilgi bildirimleri (toast Notice) g\xF6sterir.").addToggle(
       (toggle) => toggle.setValue(this.plugin.settings.showNotifications).onChange(async (val) => {
         this.plugin.settings.showNotifications = val;
         await this.plugin.saveSettings();
+      })
+    );
+    const updateHeader = containerEl.createEl("h3");
+    updateHeader.innerHTML = `${ICONS.refresh}Eklenti G\xFCncellemeleri`;
+    new import_obsidian5.Setting(containerEl).setName("Arka Planda Otomatik G\xFCncelleme Kontrol\xFC").setDesc("Obsidian a\xE7\u0131ld\u0131ktan 10 saniye sonra, 24 saatte bir arka planda g\xFCncellemeleri kontrol eder (A\xE7\u0131l\u0131\u015F performans\u0131na y\xFCk bindirmez).").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.autoCheckUpdates).onChange(async (val) => {
+        this.plugin.settings.autoCheckUpdates = val;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian5.Setting(containerEl).setName("G\xFCncellemeleri Otomatik \u0130ndir ve Kur").setDesc("Yeni bir s\xFCr\xFCm tespit edildi\u011Finde eklenti dosyalar\u0131n\u0131 otomatik g\xFCnceller.").addToggle(
+      (toggle) => toggle.setValue(this.plugin.settings.autoInstallUpdates).onChange(async (val) => {
+        this.plugin.settings.autoInstallUpdates = val;
+        await this.plugin.saveSettings();
+      })
+    );
+    new import_obsidian5.Setting(containerEl).setName("G\xFCncellemeleri \u015Eimdi Kontrol Et").setDesc(`Mevcut S\xFCr\xFCm: v${this.plugin.manifest.version}. GitHub deposundaki en son s\xFCr\xFCm\xFC canl\u0131 olarak kontrol eder.`).addButton(
+      (btn) => btn.setButtonText("\u015Eimdi Kontrol Et").setCta().onClick(async () => {
+        btn.setDisabled(true);
+        btn.setButtonText("Kontrol Ediliyor...");
+        try {
+          await checkForUpdates(this.plugin, true);
+        } finally {
+          btn.setDisabled(false);
+          btn.setButtonText("\u015Eimdi Kontrol Et");
+        }
       })
     );
   }
 };
 
 // src/gistSync.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 var GIST_FILENAME2 = "exam_app_backup.json";
 var GITHUB_API_BASE2 = "https://api.github.com";
 async function ensureGistId(settings) {
@@ -937,7 +1064,7 @@ async function fetchGistData(settings) {
       "X-GitHub-Api-Version": "2022-11-28"
     }
   };
-  const response = await (0, import_obsidian5.requestUrl)(reqParams);
+  const response = await (0, import_obsidian6.requestUrl)(reqParams);
   if (response.status !== 200) {
     throw new Error(`GitHub Gist okuma hatas\u0131: ${response.status}`);
   }
@@ -946,7 +1073,7 @@ async function fetchGistData(settings) {
   if (file) {
     let contentStr = file.content;
     if (file.truncated && file.raw_url) {
-      const rawResponse = await (0, import_obsidian5.requestUrl)({
+      const rawResponse = await (0, import_obsidian6.requestUrl)({
         url: file.raw_url,
         headers: {
           "Authorization": `Bearer ${settings.githubToken.trim()}`
@@ -993,7 +1120,7 @@ async function pushGistData(settings, payload) {
       }
     })
   };
-  const response = await (0, import_obsidian5.requestUrl)(reqParams);
+  const response = await (0, import_obsidian6.requestUrl)(reqParams);
   if (response.status !== 200) {
     throw new Error(`GitHub Gist yazma hatas\u0131: ${response.status}`);
   }
@@ -1054,10 +1181,10 @@ function mergeSyncData(localSources, remotePayload) {
 
 // src/main.ts
 var INFINITY_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 12,12 C 8.5,16.5 4,17 2.5,14.5 C 1,12 2.5,8 6.5,8.5 C 10.5,9 13.5,14.5 17.5,15.5 C 21.5,16.5 23,12.5 21.5,10 C 20,7.5 16,7.5 12,12"/><path d="M 17,6.5 L 21.5,10 L 21,5.5"/><path d="M 7,17.5 L 2.5,14.5 L 3,19"/></svg>`;
-var ExamAppGistSyncPlugin = class extends import_obsidian6.Plugin {
+var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
   async onload() {
     await this.loadSettings();
-    (0, import_obsidian6.addIcon)("examapp-infinity-sync", INFINITY_SYNC_ICON_SVG);
+    (0, import_obsidian7.addIcon)("examapp-infinity-sync", INFINITY_SYNC_ICON_SVG);
     this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
     const ribbonIconEl = this.addRibbonIcon("examapp-infinity-sync", "ExamApp Sync", async () => {
       await this.syncWithGist();
@@ -1075,18 +1202,23 @@ var ExamAppGistSyncPlugin = class extends import_obsidian6.Plugin {
         await this.syncWithGist(true);
       });
     }
+    this.app.workspace.onLayoutReady(() => {
+      setTimeout(async () => {
+        await checkForUpdates(this, false);
+      }, 1e4);
+    });
   }
   onunload() {
   }
   async syncWithGist(isAutoSync = false) {
     if (!this.settings.githubToken) {
       if (!isAutoSync && this.settings.showNotifications) {
-        new import_obsidian6.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan GitHub hesab\u0131n\u0131zla oturum a\xE7\u0131n.");
+        new import_obsidian7.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan GitHub hesab\u0131n\u0131zla oturum a\xE7\u0131n.");
       }
       return;
     }
     if (this.settings.showNotifications) {
-      new import_obsidian6.Notice("[ExamApp Sync] Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
+      new import_obsidian7.Notice("[ExamApp Sync] Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
     }
     try {
       const remoteData = await fetchGistData(this.settings);
@@ -1097,12 +1229,12 @@ var ExamAppGistSyncPlugin = class extends import_obsidian6.Plugin {
       await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
       await generateMarkdownSummary(this.app, this.settings.localFolderPath, mergedData.sources, "Success");
       if (this.settings.showNotifications) {
-        new import_obsidian6.Notice(`[ExamApp Sync] Senkronizasyon tamamland\u0131 (${mergedData.sources.length} havuz senkronize edildi).`);
+        new import_obsidian7.Notice(`[ExamApp Sync] Senkronizasyon tamamland\u0131 (${mergedData.sources.length} havuz senkronize edildi).`);
       }
     } catch (error) {
       console.error("[ExamApp Sync] Hata:", error);
       if (this.settings.showNotifications) {
-        new import_obsidian6.Notice(`[ExamApp Sync] Senkronizasyon hatas\u0131: ${error.message}`);
+        new import_obsidian7.Notice(`[ExamApp Sync] Senkronizasyon hatas\u0131: ${error.message}`);
       }
     }
   }

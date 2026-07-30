@@ -3,6 +3,7 @@ import ExamAppGistSyncPlugin from './main';
 import { fetchGitHubUser, findExamAppGist, createExamAppGist } from './githubApi';
 import { scanLocalSources, writeLocalSources, cleanupOldDirectory } from './fileScanner';
 import { generateMarkdownSummary } from './markdownGenerator';
+import { checkForUpdates } from './updateChecker';
 
 
 export interface ExamAppGistSyncSettings {
@@ -12,6 +13,9 @@ export interface ExamAppGistSyncSettings {
 	githubUsername: string;
 	autoSyncOnStartup: boolean;
 	showNotifications: boolean;
+	autoCheckUpdates: boolean;
+	lastUpdateCheckTimestamp: number;
+	autoInstallUpdates: boolean;
 }
 
 export const DEFAULT_SETTINGS: ExamAppGistSyncSettings = {
@@ -20,7 +24,10 @@ export const DEFAULT_SETTINGS: ExamAppGistSyncSettings = {
 	localFolderPath: 'ExamApp Sync',
 	githubUsername: '',
 	autoSyncOnStartup: false,
-	showNotifications: true
+	showNotifications: true,
+	autoCheckUpdates: true,
+	lastUpdateCheckTimestamp: 0,
+	autoInstallUpdates: true
 };
 
 const ICONS = {
@@ -33,7 +40,8 @@ const ICONS = {
 	checkBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
 	alertBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
 	externalLink: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
-	shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`
+	shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+	refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`
 };
 
 export class ExamAppGistSyncSettingTab extends PluginSettingTab {
@@ -385,6 +393,52 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 				.onChange(async (val) => {
 					this.plugin.settings.showNotifications = val;
 					await this.plugin.saveSettings();
+				})
+			);
+
+		// -------------------------------------------------------------
+		// 5. EKLENTİ GÜNCELLEMELERİ (AUTO-UPDATER)
+		// -------------------------------------------------------------
+		const updateHeader = containerEl.createEl('h3');
+		updateHeader.innerHTML = `${ICONS.refresh}Eklenti Güncellemeleri`;
+
+		new Setting(containerEl)
+			.setName('Arka Planda Otomatik Güncelleme Kontrolü')
+			.setDesc('Obsidian açıldıktan 10 saniye sonra, 24 saatte bir arka planda güncellemeleri kontrol eder (Açılış performansına yük bindirmez).')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoCheckUpdates)
+				.onChange(async (val) => {
+					this.plugin.settings.autoCheckUpdates = val;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Güncellemeleri Otomatik İndir ve Kur')
+			.setDesc('Yeni bir sürüm tespit edildiğinde eklenti dosyalarını otomatik günceller.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoInstallUpdates)
+				.onChange(async (val) => {
+					this.plugin.settings.autoInstallUpdates = val;
+					await this.plugin.saveSettings();
+				})
+			);
+
+		new Setting(containerEl)
+			.setName('Güncellemeleri Şimdi Kontrol Et')
+			.setDesc(`Mevcut Sürüm: v${this.plugin.manifest.version}. GitHub deposundaki en son sürümü canlı olarak kontrol eder.`)
+			.addButton(btn => btn
+				.setButtonText('Şimdi Kontrol Et')
+				.setCta()
+				.onClick(async () => {
+					btn.setDisabled(true);
+					btn.setButtonText('Kontrol Ediliyor...');
+					try {
+						await checkForUpdates(this.plugin, true);
+					} finally {
+						btn.setDisabled(false);
+						btn.setButtonText('Şimdi Kontrol Et');
+					}
 				})
 			);
 	}
