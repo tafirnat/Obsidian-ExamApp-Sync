@@ -664,7 +664,7 @@ async function checkForUpdates(plugin, isManual = false) {
     let downloadUrlManifest = "";
     try {
       const releaseRes = await (0, import_obsidian4.requestUrl)({
-        url: "https://api.github.com/repos/tafirnat/obsidian-examapp-gist-sync/releases/latest",
+        url: "https://api.github.com/repos/tafirnat/Obsidian-ExamApp-Sync/releases/latest",
         headers: { "User-Agent": "Obsidian-ExamApp-Sync-Plugin" }
       });
       if (releaseRes.status === 200) {
@@ -682,13 +682,13 @@ async function checkForUpdates(plugin, isManual = false) {
     if (!latestVersion) {
       try {
         const rawManifestRes = await (0, import_obsidian4.requestUrl)({
-          url: "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/manifest.json"
+          url: "https://raw.githubusercontent.com/tafirnat/Obsidian-ExamApp-Sync/main/manifest.json"
         });
         if (rawManifestRes.status === 200) {
           const remoteManifest = rawManifestRes.json;
           latestVersion = remoteManifest.version;
-          downloadUrlMainJs = "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/main.js";
-          downloadUrlManifest = "https://raw.githubusercontent.com/tafirnat/obsidian-examapp-gist-sync/main/manifest.json";
+          downloadUrlMainJs = "https://raw.githubusercontent.com/tafirnat/Obsidian-ExamApp-Sync/main/main.js";
+          downloadUrlManifest = "https://raw.githubusercontent.com/tafirnat/Obsidian-ExamApp-Sync/main/manifest.json";
         }
       } catch (e) {
         console.log("[ExamApp Sync] Raw GitHub main branch unreachable.");
