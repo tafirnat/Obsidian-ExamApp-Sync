@@ -73,15 +73,19 @@ export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<
     
     // Gist found but no exam_app_backup.json inside yet
     return {
-        version: 2,
+        version: 3,
+        lastUpdated: Date.now(),
         sources: [],
+        folders: [],
         deletedSourceIds: [],
+        deletedFolderIds: [],
         stats: {},
         totalStats: {},
-        recentTests: {},
+        recentTests: [],
         settings: {}
     };
 }
+
 
 export async function pushGistData(settings: ExamAppGistSyncSettings, payload: any): Promise<void> {
     const gistId = await ensureGistId(settings);

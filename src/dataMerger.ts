@@ -1,24 +1,33 @@
 export function mergeSyncData(localSources: any[], remotePayload: any): any {
     let hasLocalChanges = false;
 
-    // 0. Tombstone birleştirme
-    const mergedDeletedIds = Array.from(new Set([
-        ...(remotePayload.deletedSourceIds || [])
+    // 0. Tombstone merging for sources & folders
+    const mergedDeletedSourceIds = Array.from(new Set([
+        ...(remotePayload?.deletedSourceIds || [])
     ]));
 
-    // 1. Kaynakları Birleştir
+    const mergedDeletedFolderIds = Array.from(new Set([
+        ...(remotePayload?.deletedFolderIds || [])
+    ]));
+
+    // Preserve active folders
+    const activeFolders = (remotePayload?.folders || []).filter(
+        (f: any) => f && f.id && !mergedDeletedFolderIds.includes(f.id)
+    );
+
+    // 1. Merge sources
     const sourcesMap = new Map<string, any>();
     
-    // Gist kaynaklarını ekle (silinenleri filtrele)
-    (remotePayload.sources || []).forEach((s: any) => {
-        if (s && s.id && !mergedDeletedIds.includes(s.id)) {
+    // Add remote sources (filter out tombstones)
+    (remotePayload?.sources || []).forEach((s: any) => {
+        if (s && s.id && !mergedDeletedSourceIds.includes(s.id)) {
             sourcesMap.set(s.id, s);
         }
     });
 
-    // Yerel kaynakları dahil et ve karşılaştır (Güçlü zayıfı ezer)
+    // Merge local sources
     (localSources || []).forEach((s: any) => {
-        if (!s || !s.id || mergedDeletedIds.includes(s.id)) return;
+        if (!s || !s.id || mergedDeletedSourceIds.includes(s.id)) return;
         
         if (!sourcesMap.has(s.id)) {
             sourcesMap.set(s.id, s);
@@ -32,7 +41,7 @@ export function mergeSyncData(localSources: any[], remotePayload: any): any {
                 sourcesMap.set(s.id, s);
                 hasLocalChanges = true;
             } else if (existingHasQuestions && !localHasQuestions) {
-                // Keep existing remote source which has questions
+                // Keep existing remote source (may be offloaded archive or remote updated)
             } else if ((s.lastUsed || 0) > (existing.lastUsed || 0)) {
                 sourcesMap.set(s.id, s);
                 hasLocalChanges = true;
@@ -43,14 +52,17 @@ export function mergeSyncData(localSources: any[], remotePayload: any): any {
     const mergedSources = Array.from(sourcesMap.values());
 
     return {
-        version: remotePayload.version || 2,
+        version: 3,
         lastUpdated: Date.now(),
         sources: mergedSources,
-        deletedSourceIds: mergedDeletedIds,
-        stats: remotePayload.stats || {},
-        totalStats: remotePayload.totalStats || {},
-        recentTests: remotePayload.recentTests || [],
-        settings: remotePayload.settings || {},
+        folders: activeFolders,
+        deletedSourceIds: mergedDeletedSourceIds,
+        deletedFolderIds: mergedDeletedFolderIds,
+        stats: remotePayload?.stats || {},
+        totalStats: remotePayload?.totalStats || {},
+        recentTests: remotePayload?.recentTests || [],
+        settings: remotePayload?.settings || {},
         hasLocalChanges
     };
 }
+

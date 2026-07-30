@@ -117,7 +117,7 @@ export async function generateMarkdownSummary(
             const safeCategories = categories.replace(/\|/g, '\\|');
 
             // Escape pipe with \\| so Obsidian table renderer keeps the link within column 1
-            markdown += `| [[${relativeFilePath}\\|**${safeTitle}**]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
+            markdown += `| [[${relativeFilePath}\\|${safeTitle}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |\n`;
         });
     }
 

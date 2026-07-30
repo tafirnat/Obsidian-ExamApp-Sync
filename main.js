@@ -129,7 +129,19 @@ async function createExamAppGist(token) {
 var import_obsidian2 = require("obsidian");
 
 // src/schemaValidator.ts
-var VALID_TYPES = /* @__PURE__ */ new Set(["single_choice", "multiple_choice", "true_false", "text_input", "text", "open_ended", "fill_in_the_blank", "flashcard"]);
+var VALID_TYPES = /* @__PURE__ */ new Set([
+  "single_choice",
+  "multiple_choice",
+  "true_false",
+  "short_answer",
+  "text_input",
+  "fill_in_the_blank",
+  "flashcard",
+  "reading",
+  "topic_review",
+  "text",
+  "open_ended"
+]);
 function validateExamSchema(data) {
   var _a;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -153,7 +165,7 @@ function validateExamSchema(data) {
     if (!q.type || !VALID_TYPES.has(q.type)) {
       return { valid: false, isExamAppSource: true };
     }
-    if (q.type !== "flashcard" && (!q.answer || typeof q.answer !== "object")) {
+    if (q.type !== "flashcard" && q.type !== "reading" && q.type !== "topic_review" && (!q.answer || typeof q.answer !== "object")) {
       return { valid: false, isExamAppSource: true };
     }
   }
@@ -341,7 +353,7 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
       }
       const safeTitle = title.replace(/\|/g, "\\|");
       const safeCategories = categories.replace(/\|/g, "\\|");
-      markdown += `| [[${relativeFilePath}\\|**${safeTitle}**]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
+      markdown += `| [[${relativeFilePath}\\|${safeTitle}]] | ${qCount} | \`${appVersion}\` | ${safeCategories} | ${lastMod} |
 `;
     });
   }
@@ -949,12 +961,15 @@ async function fetchGistData(settings) {
     }
   }
   return {
-    version: 2,
+    version: 3,
+    lastUpdated: Date.now(),
     sources: [],
+    folders: [],
     deletedSourceIds: [],
+    deletedFolderIds: [],
     stats: {},
     totalStats: {},
-    recentTests: {},
+    recentTests: [],
     settings: {}
   };
 }
@@ -987,17 +1002,23 @@ async function pushGistData(settings, payload) {
 // src/dataMerger.ts
 function mergeSyncData(localSources, remotePayload) {
   let hasLocalChanges = false;
-  const mergedDeletedIds = Array.from(/* @__PURE__ */ new Set([
-    ...remotePayload.deletedSourceIds || []
+  const mergedDeletedSourceIds = Array.from(/* @__PURE__ */ new Set([
+    ...(remotePayload == null ? void 0 : remotePayload.deletedSourceIds) || []
   ]));
+  const mergedDeletedFolderIds = Array.from(/* @__PURE__ */ new Set([
+    ...(remotePayload == null ? void 0 : remotePayload.deletedFolderIds) || []
+  ]));
+  const activeFolders = ((remotePayload == null ? void 0 : remotePayload.folders) || []).filter(
+    (f) => f && f.id && !mergedDeletedFolderIds.includes(f.id)
+  );
   const sourcesMap = /* @__PURE__ */ new Map();
-  (remotePayload.sources || []).forEach((s) => {
-    if (s && s.id && !mergedDeletedIds.includes(s.id)) {
+  ((remotePayload == null ? void 0 : remotePayload.sources) || []).forEach((s) => {
+    if (s && s.id && !mergedDeletedSourceIds.includes(s.id)) {
       sourcesMap.set(s.id, s);
     }
   });
   (localSources || []).forEach((s) => {
-    if (!s || !s.id || mergedDeletedIds.includes(s.id)) return;
+    if (!s || !s.id || mergedDeletedSourceIds.includes(s.id)) return;
     if (!sourcesMap.has(s.id)) {
       sourcesMap.set(s.id, s);
       hasLocalChanges = true;
@@ -1017,14 +1038,16 @@ function mergeSyncData(localSources, remotePayload) {
   });
   const mergedSources = Array.from(sourcesMap.values());
   return {
-    version: remotePayload.version || 2,
+    version: 3,
     lastUpdated: Date.now(),
     sources: mergedSources,
-    deletedSourceIds: mergedDeletedIds,
-    stats: remotePayload.stats || {},
-    totalStats: remotePayload.totalStats || {},
-    recentTests: remotePayload.recentTests || [],
-    settings: remotePayload.settings || {},
+    folders: activeFolders,
+    deletedSourceIds: mergedDeletedSourceIds,
+    deletedFolderIds: mergedDeletedFolderIds,
+    stats: (remotePayload == null ? void 0 : remotePayload.stats) || {},
+    totalStats: (remotePayload == null ? void 0 : remotePayload.totalStats) || {},
+    recentTests: (remotePayload == null ? void 0 : remotePayload.recentTests) || [],
+    settings: (remotePayload == null ? void 0 : remotePayload.settings) || {},
     hasLocalChanges
   };
 }

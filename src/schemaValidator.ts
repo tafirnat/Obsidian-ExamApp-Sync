@@ -1,11 +1,23 @@
-const VALID_TYPES = new Set(['single_choice', 'multiple_choice', 'true_false', 'text_input', 'text', 'open_ended', 'fill_in_the_blank', 'flashcard']);
+const VALID_TYPES = new Set([
+    'single_choice',
+    'multiple_choice',
+    'true_false',
+    'short_answer',
+    'text_input',
+    'fill_in_the_blank',
+    'flashcard',
+    'reading',
+    'topic_review',
+    'text',
+    'open_ended'
+]);
 
 export function validateExamSchema(data: any): { valid: boolean, isExamAppSource: boolean } {
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
         return { valid: false, isExamAppSource: false };
     }
 
-    // ExamApp source usually has an id and questions array
+    // ExamApp source has an id (string) and questions array
     if (!data.id || typeof data.id !== 'string') {
         return { valid: false, isExamAppSource: false };
     }
@@ -14,9 +26,7 @@ export function validateExamSchema(data: any): { valid: boolean, isExamAppSource
         return { valid: false, isExamAppSource: false };
     }
 
-    // Since this plugin should silently ignore non-ExamApp sources, 
-    // we consider it an ExamApp source if it has 'id' and 'questions' array.
-    // We then validate the questions. If questions are entirely malformed, we might reject it.
+    // Check questions structure cleanly
     for (let i = 0; i < data.questions.length; i++) {
         const q = data.questions[i];
         
@@ -33,12 +43,12 @@ export function validateExamSchema(data: any): { valid: boolean, isExamAppSource
              return { valid: false, isExamAppSource: true };
         }
         
-        // Basic answer structure check based on type is optional for sync 
-        // as ExamApp does it upon import, but we can do a minimal check.
-        if (q.type !== 'flashcard' && (!q.answer || typeof q.answer !== 'object')) {
+        // Flashcard and Reading question types might not require standard answer objects
+        if (q.type !== 'flashcard' && q.type !== 'reading' && q.type !== 'topic_review' && (!q.answer || typeof q.answer !== 'object')) {
              return { valid: false, isExamAppSource: true };
         }
     }
 
     return { valid: true, isExamAppSource: true };
 }
+
