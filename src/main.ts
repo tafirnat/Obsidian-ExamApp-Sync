@@ -7,8 +7,8 @@ import { generateMarkdownSummary } from './markdownGenerator';
 import { checkForUpdates } from './updateChecker';
 import { ExamAppSyncModal } from './syncModal';
 
-// Infinity Sync Icon matching Obsidian minimalist line-art design
-const INFINITY_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 12,12 C 8.5,16.5 4,17 2.5,14.5 C 1,12 2.5,8 6.5,8.5 C 10.5,9 13.5,14.5 17.5,15.5 C 21.5,16.5 23,12.5 21.5,10 C 20,7.5 16,7.5 12,12"/><path d="M 17,6.5 L 21.5,10 L 21,5.5"/><path d="M 7,17.5 L 2.5,14.5 L 3,19"/></svg>`;
+// Modern ExamApp Dataset & Sync Transfer Icon (Exam Card + Curved Sync Arrow)
+const EXAMAPP_MODERN_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="13" rx="2.5"/><path d="M7 8h5"/><path d="M7 11h3"/><path d="M17 9v8a2.5 2.5 0 0 1-2.5 2.5H7"/><polyline points="14 17 17 20 20 17"/></svg>`;
 
 
 export default class ExamAppGistSyncPlugin extends Plugin {
@@ -20,8 +20,8 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 		// Inject dark-mode compatible CSS for examapp-sync-btn buttons and spans
 		this.injectStyles();
 
-		// Register custom Infinity Sync SVG icon
-		addIcon('examapp-infinity-sync', INFINITY_SYNC_ICON_SVG);
+		// Register custom modern ExamApp Sync SVG icon
+		addIcon('examapp-infinity-sync', EXAMAPP_MODERN_SYNC_ICON_SVG);
 
 		// Add Settings Tab
 		this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
@@ -33,6 +33,7 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 		if (ribbonIconEl) {
 			ribbonIconEl.addClass('examapp-sync-ribbon-class');
 		}
+
 
 		// Command to sync via Command Palette
 		this.addCommand({
