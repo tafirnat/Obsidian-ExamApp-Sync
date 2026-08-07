@@ -328,15 +328,15 @@ async function generateMarkdownSummary(app, folderPath, sources, syncStatus = "S
     }
   });
   const formattedSyncTime = now.toISOString().replace("T", " ").substring(0, 19);
-  let markdown = `# \u{1F4CA} ExamApp Datasets & Sync Overview
+  let markdown = `# ExamApp Datasets & Sync Overview
 
 > [!abstract] System Overview
-> - \u{1F4C1} **Total Datasets**: \`${totalDatasets}\`
-> - \u2753 **Total Questions**: \`${totalQuestions}\`
-> - \u{1F504} **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
-> - \u{1F4D8} **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
+> - **Total Datasets**: \`${totalDatasets}\`
+> - **Total Questions**: \`${totalQuestions}\`
+> - **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
+> - **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
 
-## \u{1F4D1} Datasets Index
+## Datasets Index
 
 | Dataset Title | Questions | App Version | Categories / Tags | Last Modified |
 | :--- | :---: | :---: | :--- | :--- |
@@ -404,17 +404,17 @@ async function generateAboutExamAppMarkdown(app, parentFolderPath) {
     } catch (e) {
     }
   }
-  const markdown = `# \u{1F4D8} About ExamApp & AI Dataset Guide
+  const markdown = `# About ExamApp & AI Dataset Guide
 
 > [!info] Open Source Project Reference
 > **ExamApp** is an open-source, web-based interactive flashcard and exam preparation application.
-> - \u{1F310} **GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
-> - \u{1F4CA} **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+> - **GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+> - **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
 
 ---
 
 
-## \u{1F4A1} What is ExamApp?
+## What is ExamApp?
 
 **ExamApp** allows students, developers, and educators to create, manage, and study custom question banks (datasets). Key features include:
 - Interactive flashcards with spaced repetition and confidence tracking.
@@ -423,7 +423,7 @@ async function generateAboutExamAppMarkdown(app, parentFolderPath) {
 
 ---
 
-## \u{1F916} AI & Human Dataset Schema Specification
+## AI & Human Dataset Schema Specification
 
 To ensure any JSON dataset file is recognized and synced properly by ExamApp, it **must** strictly conform to the following JSON structure.
 
@@ -452,7 +452,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## \u{1F4DD} Question Type Examples & Templates
+## Question Type Examples & Templates
 
 ### 1. Flashcard (\`flashcard\`)
 - \`content.text\`: Front side of card (Question / Prompt)
@@ -560,7 +560,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## \u26A1 Complete Dataset JSON Template
+## Complete Dataset JSON Template
 
 \`\`\`json
 {
@@ -589,7 +589,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## \u{1F916} AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
+## AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
 
 You can copy and paste the following prompt into any AI assistant to automatically generate valid ExamApp question datasets matching the official open-source schema:
 
@@ -627,9 +627,10 @@ Strict Schema Requirements:
 
 ---
 
-## \u{1F517} Related Resources
-- \u{1F4E6} **ExamApp Main GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
-- \u{1F4CA} **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+## Related Resources
+- **ExamApp Main GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+- **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+
 `;
   const existingFile = app.vault.getAbstractFileByPath(aboutFilePath);
   if (existingFile instanceof import_obsidian3.TFile) {
@@ -770,7 +771,11 @@ var ICONS = {
   alertBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
   externalLink: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
   shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-  refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`
+  refresh: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+  play: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+  search: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  syncNow: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1.2 1.3A10 10 0 0 0 22 12.5"/></svg>`
 };
 var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab {
   constructor(app, plugin) {
@@ -859,23 +864,8 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
         });
       }
       loginSetting.addButton((button) => {
-        button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum A\xE7`;
-        button.buttonEl.style.backgroundColor = "#24292f";
-        button.buttonEl.style.color = "#ffffff";
-        button.buttonEl.style.fontWeight = "600";
-        button.buttonEl.style.padding = "6px 14px";
-        button.buttonEl.style.borderRadius = "6px";
-        button.buttonEl.style.border = "none";
-        button.buttonEl.style.cursor = "pointer";
-        button.buttonEl.style.display = "inline-flex";
-        button.buttonEl.style.alignItems = "center";
-        button.buttonEl.style.transition = "background-color 0.2s ease";
-        button.buttonEl.addEventListener("mouseenter", () => {
-          button.buttonEl.style.backgroundColor = "#333942";
-        });
-        button.buttonEl.addEventListener("mouseleave", () => {
-          button.buttonEl.style.backgroundColor = "#24292f";
-        });
+        button.buttonEl.className = "examapp-sync-btn";
+        button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>GitHub ile Oturum A\xE7</span>`;
         button.onClick(async () => {
           const tokenToUse = inputToken || this.plugin.settings.githubToken;
           if (!tokenToUse) {
@@ -883,7 +873,7 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
             return;
           }
           button.setDisabled(true);
-          button.buttonEl.innerHTML = `${ICONS.github} Oturum A\xE7\u0131l\u0131yor...`;
+          button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>Oturum A\xE7\u0131l\u0131yor...</span>`;
           try {
             const user = await fetchGitHubUser(tokenToUse);
             this.plugin.settings.githubToken = tokenToUse;
@@ -902,14 +892,14 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
             new import_obsidian5.Notice(`[ExamApp Sync] Oturum A\xE7ma Ba\u015Far\u0131s\u0131z: ${err.message}`);
           } finally {
             button.setDisabled(false);
-            button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum A\xE7`;
+            button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>GitHub ile Oturum A\xE7</span>`;
           }
         });
       });
     }
     if (this.plugin.settings.githubToken) {
       const gistHeader = containerEl.createEl("h3");
-      gistHeader.innerHTML = `${ICONS.syncInfinity}Gist Durumu & Otomatik Tespit`;
+      gistHeader.innerHTML = `${ICONS.syncInfinity}Gist Durumu & Senkronizasyon Eylemleri`;
       const gistCard = containerEl.createDiv();
       gistCard.style.padding = "12px";
       gistCard.style.borderRadius = "6px";
@@ -925,8 +915,17 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
         infoEl.style.color = "var(--text-accent)";
         infoEl.style.marginBottom = "10px";
       }
-      new import_obsidian5.Setting(gistCard).setName("Gist Otomatik Yeniden Tara / Olu\u015Ftur").setDesc("Hesab\u0131n\u0131zdaki ExamApp Gist varl\u0131\u011F\u0131n\u0131 tarar veya yoksa otomatik olu\u015Fturur.").addButton(
-        (btn) => btn.setButtonText("Yeniden Tara").onClick(async () => {
+      new import_obsidian5.Setting(gistCard).setName("Manuel Senkronizasyon").setDesc("Gist ile Vault verilerinizi canl\u0131 olarak \xE7ift y\xF6nl\xFC e\u015Fitleyin.").addButton((btn) => {
+        btn.buttonEl.className = "examapp-sync-btn";
+        btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.syncNow}</span><span>\u015Eimdi Senkronize Et</span>`;
+        btn.onClick(async () => {
+          await this.plugin.syncWithGist();
+        });
+      });
+      new import_obsidian5.Setting(gistCard).setName("Gist Otomatik Yeniden Tara / Olu\u015Ftur").setDesc("Hesab\u0131n\u0131zdaki ExamApp Gist varl\u0131\u011F\u0131n\u0131 tarar veya yoksa otomatik olu\u015Fturur.").addButton((btn) => {
+        btn.buttonEl.className = "examapp-sync-btn";
+        btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.search}</span><span>Yeniden Tara</span>`;
+        btn.onClick(async () => {
           try {
             const id = await findExamAppGist(this.plugin.settings.githubToken);
             if (id) {
@@ -940,9 +939,11 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
           } catch (e) {
             new import_obsidian5.Notice(`[ExamApp Sync] Taramada hata: ${e.message}`);
           }
-        })
-      ).addButton(
-        (btn) => btn.setButtonText("Yeni Gist Olu\u015Ftur").setCta().onClick(async () => {
+        });
+      }).addButton((btn) => {
+        btn.buttonEl.className = "examapp-sync-btn";
+        btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.plus}</span><span>Yeni Gist Olu\u015Ftur</span>`;
+        btn.onClick(async () => {
           try {
             const newId = await createExamAppGist(this.plugin.settings.githubToken);
             this.plugin.settings.gistId = newId;
@@ -952,8 +953,8 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
           } catch (e) {
             new import_obsidian5.Notice(`[ExamApp Sync] Gist olu\u015Fturma hatas\u0131: ${e.message}`);
           }
-        })
-      );
+        });
+      });
       const detailsEl = containerEl.createEl("details");
       detailsEl.style.marginBottom = "18px";
       detailsEl.style.cursor = "pointer";
@@ -1002,12 +1003,14 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
     schemaInfoBox.style.marginBottom = "12px";
     schemaInfoBox.style.fontSize = "0.92em";
     schemaInfoBox.innerHTML = `${ICONS.shield} <strong>\u015Eema G\xFCvenlik Filtresi:</strong> Bu klas\xF6r i\xE7erisindeki dosyalar taran\u0131rken sadece ge\xE7erli ExamApp soru \u015Femas\u0131na (<code>{ id, questions: [...] }</code>) sahip <code>.json</code> dosyalar\u0131 i\u015Flenir. Di\u011Fer uyumsuz JSON veya not dosyalar\u0131 g\xFCvenle atlan\u0131r.`;
-    new import_obsidian5.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton(
-      (btn) => btn.setButtonText("\u015Eimdi Tara ve Do\u011Frula").onClick(async () => {
+    new import_obsidian5.Setting(containerEl).setName("Klas\xF6r Taramas\u0131n\u0131 Test Et").setDesc("Belirtilen klas\xF6rdeki uyumlu ExamApp soru havuzlar\u0131n\u0131 canl\u0131 olarak tarar ve say\u0131s\u0131n\u0131 do\u011Frular.").addButton((btn) => {
+      btn.buttonEl.className = "examapp-sync-btn";
+      btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.search}</span><span>\u015Eimdi Tara ve Do\u011Frula</span>`;
+      btn.onClick(async () => {
         const sources = await scanLocalSources(this.app, this.plugin.settings.localFolderPath);
         new import_obsidian5.Notice(`[ExamApp Sync] Tarama Tamamland\u0131: "${this.plugin.settings.localFolderPath}" klas\xF6r\xFCnde ${sources.length} adet ge\xE7erli ExamApp soru havuzu bulundu.`);
-      })
-    );
+      });
+    });
     const settingsHeader = containerEl.createEl("h3");
     settingsHeader.innerHTML = `${ICONS.sliders}Genel Otomasyon Ayarlar\u0131`;
     new import_obsidian5.Setting(containerEl).setName("Obsidian A\xE7\u0131l\u0131\u015F\u0131nda Otomatik Senkronize Et").setDesc("Obsidian ba\u015Flat\u0131ld\u0131\u011F\u0131nda Gist senkronizasyonunu arka planda otomatik olarak tetikler.").addToggle(
@@ -1036,18 +1039,20 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
         await this.plugin.saveSettings();
       })
     );
-    new import_obsidian5.Setting(containerEl).setName("G\xFCncellemeleri \u015Eimdi Kontrol Et").setDesc(`Mevcut S\xFCr\xFCm: v${this.plugin.manifest.version}. GitHub deposundaki en son s\xFCr\xFCm\xFC canl\u0131 olarak kontrol eder.`).addButton(
-      (btn) => btn.setButtonText("\u015Eimdi Kontrol Et").setCta().onClick(async () => {
+    new import_obsidian5.Setting(containerEl).setName("G\xFCncellemeleri \u015Eimdi Kontrol Et").setDesc(`Mevcut S\xFCr\xFCm: v${this.plugin.manifest.version}. GitHub deposundaki en son s\xFCr\xFCm\xFC canl\u0131 olarak kontrol eder.`).addButton((btn) => {
+      btn.buttonEl.className = "examapp-sync-btn";
+      btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>\u015Eimdi Kontrol Et</span>`;
+      btn.onClick(async () => {
         btn.setDisabled(true);
-        btn.setButtonText("Kontrol Ediliyor...");
+        btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>Kontrol Ediliyor...</span>`;
         try {
           await checkForUpdates(this.plugin, true);
         } finally {
           btn.setDisabled(false);
-          btn.setButtonText("\u015Eimdi Kontrol Et");
+          btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>\u015Eimdi Kontrol Et</span>`;
         }
-      })
-    );
+      });
+    });
   }
 };
 
@@ -1242,6 +1247,7 @@ var INFINITY_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="curre
 var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
   async onload() {
     await this.loadSettings();
+    this.injectStyles();
     (0, import_obsidian7.addIcon)("examapp-infinity-sync", INFINITY_SYNC_ICON_SVG);
     this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
     const ribbonIconEl = this.addRibbonIcon("examapp-infinity-sync", "ExamApp Sync", async () => {
@@ -1301,5 +1307,53 @@ var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
   }
   async saveSettings() {
     await this.saveData(this.settings);
+  }
+  injectStyles() {
+    const styleId = "examapp-sync-custom-styles";
+    if (document.getElementById(styleId)) return;
+    const styleEl = document.createElement("style");
+    styleEl.id = styleId;
+    styleEl.textContent = `
+			.examapp-sync-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 6px 14px;
+				border-radius: 6px;
+				font-weight: 500;
+				font-size: 0.9em;
+				cursor: pointer;
+				border: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.15));
+				background-color: var(--interactive-normal, #2d2d2d);
+				color: var(--text-normal, #dcddde);
+				transition: background-color 0.2s ease, border-color 0.2s ease;
+			}
+			.examapp-sync-btn:hover {
+				background-color: var(--interactive-hover, #3d3d3d);
+				border-color: var(--interactive-accent, #7f6df2);
+			}
+			.examapp-sync-btn span {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				padding: 3px 8px;
+				border-radius: 4px;
+				background-color: var(--background-secondary-alt, rgba(255, 255, 255, 0.08));
+				color: var(--text-normal, #dcddde);
+				font-size: 0.88em;
+				font-weight: 500;
+			}
+			.examapp-sync-btn span.examapp-sync-icon-span {
+				padding: 0;
+				background-color: transparent;
+				color: currentColor;
+			}
+			.examapp-sync-btn span.examapp-sync-badge-span {
+				background-color: var(--background-secondary-alt, rgba(255, 255, 255, 0.12));
+				color: var(--text-accent, #a78bfa);
+				font-weight: 600;
+			}
+		`;
+    document.head.appendChild(styleEl);
   }
 };

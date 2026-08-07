@@ -41,7 +41,11 @@ const ICONS = {
 	alertBadge: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
 	externalLink: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-left: 4px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
 	shield: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--interactive-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-	refresh: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-bottom; margin-right: 8px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`
+	refresh: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+	play: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
+	search: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+	plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+	syncNow: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle;"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1.2 1.3A10 10 0 0 0 22 12.5"/></svg>`
 };
 
 export class ExamAppGistSyncSettingTab extends PluginSettingTab {
@@ -156,25 +160,8 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 			}
 
 			loginSetting.addButton(button => {
-				button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum Aç`;
-				button.buttonEl.style.backgroundColor = '#24292f';
-				button.buttonEl.style.color = '#ffffff';
-				button.buttonEl.style.fontWeight = '600';
-				button.buttonEl.style.padding = '6px 14px';
-				button.buttonEl.style.borderRadius = '6px';
-				button.buttonEl.style.border = 'none';
-				button.buttonEl.style.cursor = 'pointer';
-				button.buttonEl.style.display = 'inline-flex';
-				button.buttonEl.style.alignItems = 'center';
-				button.buttonEl.style.transition = 'background-color 0.2s ease';
-
-				button.buttonEl.addEventListener('mouseenter', () => {
-					button.buttonEl.style.backgroundColor = '#333942';
-				});
-				button.buttonEl.addEventListener('mouseleave', () => {
-					button.buttonEl.style.backgroundColor = '#24292f';
-				});
-
+				button.buttonEl.className = 'examapp-sync-btn';
+				button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>GitHub ile Oturum Aç</span>`;
 				button.onClick(async () => {
 					const tokenToUse = inputToken || this.plugin.settings.githubToken;
 					if (!tokenToUse) {
@@ -183,7 +170,7 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 					}
 
 					button.setDisabled(true);
-					button.buttonEl.innerHTML = `${ICONS.github} Oturum Açılıyor...`;
+					button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>Oturum Açılıyor...</span>`;
 
 					try {
 						// 1. Validate User
@@ -211,7 +198,7 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 						new Notice(`[ExamApp Sync] Oturum Açma Başarısız: ${err.message}`);
 					} finally {
 						button.setDisabled(false);
-						button.buttonEl.innerHTML = `${ICONS.github} GitHub ile Oturum Aç`;
+						button.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.github}</span><span>GitHub ile Oturum Aç</span>`;
 					}
 				});
 			});
@@ -222,7 +209,7 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 		// -------------------------------------------------------------
 		if (this.plugin.settings.githubToken) {
 			const gistHeader = containerEl.createEl('h3');
-			gistHeader.innerHTML = `${ICONS.syncInfinity}Gist Durumu & Otomatik Tespit`;
+			gistHeader.innerHTML = `${ICONS.syncInfinity}Gist Durumu & Senkronizasyon Eylemleri`;
 
 			const gistCard = containerEl.createDiv();
 			gistCard.style.padding = '12px';
@@ -242,11 +229,23 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 			}
 
 			new Setting(gistCard)
+				.setName('Manuel Senkronizasyon')
+				.setDesc('Gist ile Vault verilerinizi canlı olarak çift yönlü eşitleyin.')
+				.addButton(btn => {
+					btn.buttonEl.className = 'examapp-sync-btn';
+					btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.syncNow}</span><span>Şimdi Senkronize Et</span>`;
+					btn.onClick(async () => {
+						await this.plugin.syncWithGist();
+					});
+				});
+
+			new Setting(gistCard)
 				.setName('Gist Otomatik Yeniden Tara / Oluştur')
 				.setDesc('Hesabınızdaki ExamApp Gist varlığını tarar veya yoksa otomatik oluşturur.')
-				.addButton(btn => btn
-					.setButtonText('Yeniden Tara')
-					.onClick(async () => {
+				.addButton(btn => {
+					btn.buttonEl.className = 'examapp-sync-btn';
+					btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.search}</span><span>Yeniden Tara</span>`;
+					btn.onClick(async () => {
 						try {
 							const id = await findExamAppGist(this.plugin.settings.githubToken);
 							if (id) {
@@ -260,12 +259,12 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 						} catch (e: any) {
 							new Notice(`[ExamApp Sync] Taramada hata: ${e.message}`);
 						}
-					})
-				)
-				.addButton(btn => btn
-					.setButtonText('Yeni Gist Oluştur')
-					.setCta()
-					.onClick(async () => {
+					});
+				})
+				.addButton(btn => {
+					btn.buttonEl.className = 'examapp-sync-btn';
+					btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.plus}</span><span>Yeni Gist Oluştur</span>`;
+					btn.onClick(async () => {
 						try {
 							const newId = await createExamAppGist(this.plugin.settings.githubToken);
 							this.plugin.settings.gistId = newId;
@@ -275,8 +274,8 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 						} catch (e: any) {
 							new Notice(`[ExamApp Sync] Gist oluşturma hatası: ${e.message}`);
 						}
-					})
-				);
+					});
+				});
 
 			// Gelişmiş Ayarlar (Manuel Gist ID Override)
 			const detailsEl = containerEl.createEl('details');
@@ -360,13 +359,14 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Klasör Taramasını Test Et')
 			.setDesc('Belirtilen klasördeki uyumlu ExamApp soru havuzlarını canlı olarak tarar ve sayısını doğrular.')
-			.addButton(btn => btn
-				.setButtonText('Şimdi Tara ve Doğrula')
-				.onClick(async () => {
+			.addButton(btn => {
+				btn.buttonEl.className = 'examapp-sync-btn';
+				btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.search}</span><span>Şimdi Tara ve Doğrula</span>`;
+				btn.onClick(async () => {
 					const sources = await scanLocalSources(this.app, this.plugin.settings.localFolderPath);
 					new Notice(`[ExamApp Sync] Tarama Tamamlandı: "${this.plugin.settings.localFolderPath}" klasöründe ${sources.length} adet geçerli ExamApp soru havuzu bulundu.`);
-				})
-			);
+				});
+			});
 
 		// -------------------------------------------------------------
 		// 4. GENEL AYARLAR
@@ -427,19 +427,20 @@ export class ExamAppGistSyncSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName('Güncellemeleri Şimdi Kontrol Et')
 			.setDesc(`Mevcut Sürüm: v${this.plugin.manifest.version}. GitHub deposundaki en son sürümü canlı olarak kontrol eder.`)
-			.addButton(btn => btn
-				.setButtonText('Şimdi Kontrol Et')
-				.setCta()
-				.onClick(async () => {
+			.addButton(btn => {
+				btn.buttonEl.className = 'examapp-sync-btn';
+				btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>Şimdi Kontrol Et</span>`;
+				btn.onClick(async () => {
 					btn.setDisabled(true);
-					btn.setButtonText('Kontrol Ediliyor...');
+					btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>Kontrol Ediliyor...</span>`;
 					try {
 						await checkForUpdates(this.plugin, true);
 					} finally {
 						btn.setDisabled(false);
-						btn.setButtonText('Şimdi Kontrol Et');
+						btn.buttonEl.innerHTML = `<span class="examapp-sync-icon-span">${ICONS.refresh}</span><span>Şimdi Kontrol Et</span>`;
 					}
-				})
-			);
+				});
+			});
 	}
 }
+

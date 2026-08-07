@@ -69,15 +69,15 @@ export async function generateMarkdownSummary(
     const formattedSyncTime = now.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:mm:ss
 
     // Header & Content (100% English, no YAML frontmatter to prevent localized Properties panel)
-    let markdown = `# 📊 ExamApp Datasets & Sync Overview
+    let markdown = `# ExamApp Datasets & Sync Overview
 
 > [!abstract] System Overview
-> - 📁 **Total Datasets**: \`${totalDatasets}\`
-> - ❓ **Total Questions**: \`${totalQuestions}\`
-> - 🔄 **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
-> - 📘 **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
+> - **Total Datasets**: \`${totalDatasets}\`
+> - **Total Questions**: \`${totalQuestions}\`
+> - **Last Sync**: \`${formattedSyncTime}\` (\`${syncStatus}\`)
+> - **Guide & AI Prompt**: [[01_ExamApp_About.md|01_ExamApp_About.md]]
 
-## 📑 Datasets Index
+## Datasets Index
 
 | Dataset Title | Questions | App Version | Categories / Tags | Last Modified |
 | :--- | :---: | :---: | :--- | :--- |
@@ -165,17 +165,17 @@ export async function generateAboutExamAppMarkdown(
         }
     }
 
-    const markdown = `# 📘 About ExamApp & AI Dataset Guide
+    const markdown = `# About ExamApp & AI Dataset Guide
 
 > [!info] Open Source Project Reference
 > **ExamApp** is an open-source, web-based interactive flashcard and exam preparation application.
-> - 🌐 **GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
-> - 📊 **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+> - **GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+> - **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
 
 ---
 
 
-## 💡 What is ExamApp?
+## What is ExamApp?
 
 **ExamApp** allows students, developers, and educators to create, manage, and study custom question banks (datasets). Key features include:
 - Interactive flashcards with spaced repetition and confidence tracking.
@@ -184,7 +184,7 @@ export async function generateAboutExamAppMarkdown(
 
 ---
 
-## 🤖 AI & Human Dataset Schema Specification
+## AI & Human Dataset Schema Specification
 
 To ensure any JSON dataset file is recognized and synced properly by ExamApp, it **must** strictly conform to the following JSON structure.
 
@@ -213,7 +213,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## 📝 Question Type Examples & Templates
+## Question Type Examples & Templates
 
 ### 1. Flashcard (\`flashcard\`)
 - \`content.text\`: Front side of card (Question / Prompt)
@@ -321,7 +321,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## ⚡ Complete Dataset JSON Template
+## Complete Dataset JSON Template
 
 \`\`\`json
 {
@@ -350,7 +350,7 @@ To ensure any JSON dataset file is recognized and synced properly by ExamApp, it
 
 ---
 
-## 🤖 AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
+## AI Prompt Template (Copy & Paste for ChatGPT / Claude / Gemini)
 
 You can copy and paste the following prompt into any AI assistant to automatically generate valid ExamApp question datasets matching the official open-source schema:
 
@@ -388,9 +388,10 @@ Strict Schema Requirements:
 
 ---
 
-## 🔗 Related Resources
-- 📦 **ExamApp Main GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
-- 📊 **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+## Related Resources
+- **ExamApp Main GitHub Repository**: [https://github.com/tafirnat/exam-app](https://github.com/tafirnat/exam-app)
+- **Dynamic Datasets Dashboard**: [[00_ExamApp_Overview.md|00_ExamApp_Overview.md]]
+
 `;
 
     const existingFile = app.vault.getAbstractFileByPath(aboutFilePath);

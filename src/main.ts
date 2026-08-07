@@ -16,8 +16,12 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		// Inject dark-mode compatible CSS for examapp-sync-btn buttons and spans
+		this.injectStyles();
+
 		// Register custom Infinity Sync SVG icon
 		addIcon('examapp-infinity-sync', INFINITY_SYNC_ICON_SVG);
+
 
 		// Add Settings Tab
 		this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
@@ -108,4 +112,55 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	injectStyles() {
+		const styleId = 'examapp-sync-custom-styles';
+		if (document.getElementById(styleId)) return;
+
+		const styleEl = document.createElement('style');
+		styleEl.id = styleId;
+		styleEl.textContent = `
+			.examapp-sync-btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 6px 14px;
+				border-radius: 6px;
+				font-weight: 500;
+				font-size: 0.9em;
+				cursor: pointer;
+				border: 1px solid var(--background-modifier-border, rgba(255, 255, 255, 0.15));
+				background-color: var(--interactive-normal, #2d2d2d);
+				color: var(--text-normal, #dcddde);
+				transition: background-color 0.2s ease, border-color 0.2s ease;
+			}
+			.examapp-sync-btn:hover {
+				background-color: var(--interactive-hover, #3d3d3d);
+				border-color: var(--interactive-accent, #7f6df2);
+			}
+			.examapp-sync-btn span {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				padding: 3px 8px;
+				border-radius: 4px;
+				background-color: var(--background-secondary-alt, rgba(255, 255, 255, 0.08));
+				color: var(--text-normal, #dcddde);
+				font-size: 0.88em;
+				font-weight: 500;
+			}
+			.examapp-sync-btn span.examapp-sync-icon-span {
+				padding: 0;
+				background-color: transparent;
+				color: currentColor;
+			}
+			.examapp-sync-btn span.examapp-sync-badge-span {
+				background-color: var(--background-secondary-alt, rgba(255, 255, 255, 0.12));
+				color: var(--text-accent, #a78bfa);
+				font-weight: 600;
+			}
+		`;
+		document.head.appendChild(styleEl);
+	}
 }
+
