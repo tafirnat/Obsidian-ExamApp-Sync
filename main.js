@@ -1253,7 +1253,9 @@ var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
     const ribbonIconEl = this.addRibbonIcon("examapp-infinity-sync", "ExamApp Sync", async () => {
       await this.syncWithGist();
     });
-    ribbonIconEl.addClass("examapp-sync-ribbon-class");
+    if (ribbonIconEl) {
+      ribbonIconEl.addClass("examapp-sync-ribbon-class");
+    }
     this.addCommand({
       id: "sync-examapp-gist",
       name: "Sync with ExamApp Gist",

@@ -30,7 +30,10 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 		const ribbonIconEl = this.addRibbonIcon('examapp-infinity-sync', 'ExamApp Sync', async () => {
 			await this.syncWithGist();
 		});
-		ribbonIconEl.addClass('examapp-sync-ribbon-class');
+		if (ribbonIconEl) {
+			ribbonIconEl.addClass('examapp-sync-ribbon-class');
+		}
+
 
 		// Command to sync via Command Palette
 		this.addCommand({
