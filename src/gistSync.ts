@@ -2,7 +2,9 @@ import { requestUrl, RequestUrlParam, RequestUrlResponse } from 'obsidian';
 import { ExamAppGistSyncSettings } from './settings';
 import { findExamAppGist, createExamAppGist } from './githubApi';
 
-const GIST_FILENAME = 'exam_app_backup.json';
+const BACKUP_FILENAME = 'exam_app_backup.json';
+const SOURCES_FILENAME = 'exam_app_sources.json';
+const ARCHIVE_FILENAME = 'exam_app_archive.json';
 const GITHUB_API_BASE = 'https://api.github.com';
 
 async function ensureGistId(settings: ExamAppGistSyncSettings): Promise<string> {
@@ -27,14 +29,32 @@ async function ensureGistId(settings: ExamAppGistSyncSettings): Promise<string> 
     return createdId;
 }
 
+async function getFileContent(fileObj: any, token: string): Promise<string | null> {
+    if (!fileObj) return null;
+    let contentStr = fileObj.content;
+    if (fileObj.truncated && fileObj.raw_url) {
+        const rawResponse = await requestUrl({
+            url: fileObj.raw_url,
+            headers: {
+                'Authorization': `Bearer ${token.trim()}`
+            }
+        });
+        if (rawResponse.status === 200) {
+            contentStr = rawResponse.text;
+        }
+    }
+    return (contentStr && contentStr.trim().length > 0) ? contentStr : null;
+}
+
 export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<any> {
     const gistId = await ensureGistId(settings);
+    const token = settings.githubToken.trim();
 
     const reqParams: RequestUrlParam = {
         url: `${GITHUB_API_BASE}/gists/${gistId}`,
         method: 'GET',
         headers: {
-            'Authorization': `Bearer ${settings.githubToken.trim()}`,
+            'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github+json',
             'X-GitHub-Api-Version': '2022-11-28'
         }
@@ -47,65 +67,87 @@ export async function fetchGistData(settings: ExamAppGistSyncSettings): Promise<
     }
     
     const gist = response.json;
-    const file = gist.files && gist.files[GIST_FILENAME];
-    
-    if (file) {
-        let contentStr = file.content;
+    const files = gist.files || {};
 
-        // GitHub Gist API truncates files larger than ~1MB and sets truncated = true.
-        // If truncated, fetch the complete raw content from file.raw_url.
-        if (file.truncated && file.raw_url) {
-            const rawResponse = await requestUrl({
-                url: file.raw_url,
-                headers: {
-                    'Authorization': `Bearer ${settings.githubToken.trim()}`
-                }
-            });
-            if (rawResponse.status === 200) {
-                contentStr = rawResponse.text;
-            }
-        }
+    const backupContent = await getFileContent(files[BACKUP_FILENAME], token);
+    const sourcesContent = await getFileContent(files[SOURCES_FILENAME], token);
 
-        if (contentStr && contentStr.trim().length > 0) {
-            return JSON.parse(contentStr);
-        }
+    const backupJson = backupContent ? JSON.parse(backupContent) : null;
+    const sourcesJson = sourcesContent ? JSON.parse(sourcesContent) : null;
+
+    if (!backupJson && !sourcesJson) {
+        return {
+            version: 3,
+            lastUpdated: Date.now(),
+            sources: [],
+            folders: [],
+            deletedSourceIds: [],
+            deletedFolderIds: [],
+            stats: {},
+            totalStats: {},
+            recentTests: [],
+            settings: {}
+        };
     }
-    
-    // Gist found but no exam_app_backup.json inside yet
-    return {
-        version: 3,
-        lastUpdated: Date.now(),
-        sources: [],
-        folders: [],
-        deletedSourceIds: [],
-        deletedFolderIds: [],
-        stats: {},
-        totalStats: {},
-        recentTests: [],
-        settings: {}
-    };
-}
 
+    const payload = backupJson ? { ...backupJson } : {};
+    const inlineSources = Array.isArray(backupJson?.sources) ? backupJson.sources : [];
+    const splitSources = Array.isArray(sourcesJson?.sources) ? sourcesJson.sources : null;
+
+    let activeSources: any[] = [];
+    if (!splitSources) {
+        activeSources = inlineSources;
+    } else {
+        const inlineAt = backupJson?.lastUpdated || 0;
+        const splitAt = sourcesJson?.lastUpdated || 0;
+        activeSources = (inlineSources.length > 0 && inlineAt > splitAt) ? inlineSources : splitSources;
+    }
+
+    payload.sources = activeSources;
+    payload.lastUpdated = Math.max(backupJson?.lastUpdated || 0, sourcesJson?.lastUpdated || 0);
+
+    return payload;
+}
 
 export async function pushGistData(settings: ExamAppGistSyncSettings, payload: any): Promise<void> {
     const gistId = await ensureGistId(settings);
+    const token = settings.githubToken.trim();
+    const now = Date.now();
+
+    // Prepare backup file payload (progress metadata without redundant heavy sources array)
+    const backupPayload = {
+        ...payload,
+        sources: [],
+        lastUpdated: now
+    };
+
+    // Prepare sources file payload
+    const sourcesPayload = {
+        sources: payload.sources || [],
+        lastUpdated: now
+    };
+
+    const filesToPatch: Record<string, any> = {
+        [BACKUP_FILENAME]: {
+            content: JSON.stringify(backupPayload, null, 2)
+        },
+        [SOURCES_FILENAME]: {
+            content: JSON.stringify(sourcesPayload, null, 2)
+        }
+    };
 
     const reqParams: RequestUrlParam = {
         url: `${GITHUB_API_BASE}/gists/${gistId}`,
         method: 'PATCH',
         headers: {
-            'Authorization': `Bearer ${settings.githubToken.trim()}`,
+            'Authorization': `Bearer ${token}`,
             'Accept': 'application/vnd.github+json',
             'Content-Type': 'application/json',
             'X-GitHub-Api-Version': '2022-11-28'
         },
         body: JSON.stringify({
             description: 'Exam App - User Study & Resource Data Sync (via Obsidian)',
-            files: {
-                [GIST_FILENAME]: {
-                    content: JSON.stringify(payload, null, 2)
-                }
-            }
+            files: filesToPatch
         })
     };
 
@@ -115,3 +157,4 @@ export async function pushGistData(settings: ExamAppGistSyncSettings, payload: a
         throw new Error(`GitHub Gist yazma hatası: ${response.status}`);
     }
 }
+

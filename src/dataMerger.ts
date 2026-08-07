@@ -1,10 +1,16 @@
 export function mergeSyncData(localSources: any[], remotePayload: any): any {
     let hasLocalChanges = false;
 
-    // 0. Tombstone merging for sources & folders
+    // Collect all active source IDs (remote & local) to avoid blocking existing/revived sources
+    const activeSourceIds = new Set([
+        ...(remotePayload?.sources || []).map((s: any) => s?.id).filter(Boolean),
+        ...(localSources || []).map((s: any) => s?.id).filter(Boolean)
+    ]);
+
+    // 0. Tombstone merging for sources & folders (purging active sources from tombstone list)
     const mergedDeletedSourceIds = Array.from(new Set([
         ...(remotePayload?.deletedSourceIds || [])
-    ]));
+    ])).filter(id => !activeSourceIds.has(id));
 
     const mergedDeletedFolderIds = Array.from(new Set([
         ...(remotePayload?.deletedFolderIds || [])
@@ -65,4 +71,5 @@ export function mergeSyncData(localSources: any[], remotePayload: any): any {
         hasLocalChanges
     };
 }
+
 

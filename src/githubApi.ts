@@ -1,6 +1,7 @@
 import { requestUrl, RequestUrlParam } from 'obsidian';
 
-const GIST_FILENAME = 'exam_app_backup.json';
+const BACKUP_FILENAME = 'exam_app_backup.json';
+const SOURCES_FILENAME = 'exam_app_sources.json';
 const GITHUB_API_BASE = 'https://api.github.com';
 
 export interface GitHubUser {
@@ -61,7 +62,7 @@ export async function findExamAppGist(token: string): Promise<string | null> {
     const gists = response.json;
     if (Array.isArray(gists)) {
         for (const gist of gists) {
-            if (gist.files && (gist.files[GIST_FILENAME] || gist.description?.toLowerCase().includes('exam app'))) {
+            if (gist.files && (gist.files[BACKUP_FILENAME] || gist.files[SOURCES_FILENAME] || gist.description?.toLowerCase().includes('exam app'))) {
                 return gist.id;
             }
         }
@@ -75,14 +76,23 @@ export async function createExamAppGist(token: string): Promise<string> {
         throw new Error('Gist oluşturmak için geçerli bir token gerekiyor.');
     }
 
-    const initialPayload = {
-        version: 2,
+    const now = Date.now();
+    const initialBackupPayload = {
+        version: 3,
+        lastUpdated: now,
         sources: [],
+        folders: [],
         deletedSourceIds: [],
+        deletedFolderIds: [],
         stats: {},
         totalStats: {},
-        recentTests: {},
+        recentTests: [],
         settings: {}
+    };
+
+    const initialSourcesPayload = {
+        sources: [],
+        lastUpdated: now
     };
 
     const reqParams: RequestUrlParam = {
@@ -98,8 +108,11 @@ export async function createExamAppGist(token: string): Promise<string> {
             description: 'Exam App - User Study & Resource Data Sync (via Obsidian)',
             public: false,
             files: {
-                [GIST_FILENAME]: {
-                    content: JSON.stringify(initialPayload, null, 2)
+                [BACKUP_FILENAME]: {
+                    content: JSON.stringify(initialBackupPayload, null, 2)
+                },
+                [SOURCES_FILENAME]: {
+                    content: JSON.stringify(initialSourcesPayload, null, 2)
                 }
             }
         })
@@ -113,3 +126,4 @@ export async function createExamAppGist(token: string): Promise<string> {
 
     return response.json.id;
 }
+

@@ -32,7 +32,8 @@ var import_obsidian5 = require("obsidian");
 
 // src/githubApi.ts
 var import_obsidian = require("obsidian");
-var GIST_FILENAME = "exam_app_backup.json";
+var BACKUP_FILENAME = "exam_app_backup.json";
+var SOURCES_FILENAME = "exam_app_sources.json";
 var GITHUB_API_BASE = "https://api.github.com";
 async function fetchGitHubUser(token) {
   if (!token || !token.trim()) {
@@ -79,7 +80,7 @@ async function findExamAppGist(token) {
   const gists = response.json;
   if (Array.isArray(gists)) {
     for (const gist of gists) {
-      if (gist.files && (gist.files[GIST_FILENAME] || ((_a = gist.description) == null ? void 0 : _a.toLowerCase().includes("exam app")))) {
+      if (gist.files && (gist.files[BACKUP_FILENAME] || gist.files[SOURCES_FILENAME] || ((_a = gist.description) == null ? void 0 : _a.toLowerCase().includes("exam app")))) {
         return gist.id;
       }
     }
@@ -90,14 +91,22 @@ async function createExamAppGist(token) {
   if (!token || !token.trim()) {
     throw new Error("Gist olu\u015Fturmak i\xE7in ge\xE7erli bir token gerekiyor.");
   }
-  const initialPayload = {
-    version: 2,
+  const now = Date.now();
+  const initialBackupPayload = {
+    version: 3,
+    lastUpdated: now,
     sources: [],
+    folders: [],
     deletedSourceIds: [],
+    deletedFolderIds: [],
     stats: {},
     totalStats: {},
-    recentTests: {},
+    recentTests: [],
     settings: {}
+  };
+  const initialSourcesPayload = {
+    sources: [],
+    lastUpdated: now
   };
   const reqParams = {
     url: `${GITHUB_API_BASE}/gists`,
@@ -112,8 +121,11 @@ async function createExamAppGist(token) {
       description: "Exam App - User Study & Resource Data Sync (via Obsidian)",
       public: false,
       files: {
-        [GIST_FILENAME]: {
-          content: JSON.stringify(initialPayload, null, 2)
+        [BACKUP_FILENAME]: {
+          content: JSON.stringify(initialBackupPayload, null, 2)
+        },
+        [SOURCES_FILENAME]: {
+          content: JSON.stringify(initialSourcesPayload, null, 2)
         }
       }
     })
@@ -155,18 +167,24 @@ function validateExamSchema(data) {
   }
   for (let i = 0; i < data.questions.length; i++) {
     const q = data.questions[i];
-    if (q.id === void 0 || q.id === null) {
-      return { valid: false, isExamAppSource: true };
+    if (!q || typeof q !== "object") continue;
+    if (q.id === void 0 || q.id === null || String(q.id).trim() === "") {
+      q.id = `q_${Math.random().toString(36).substring(2, 9)}`;
     }
-    const text = ((_a = q.content) == null ? void 0 : _a.text) || q.text;
-    if (!text || String(text).trim() === "") {
-      return { valid: false, isExamAppSource: true };
+    const currentText = ((_a = q.content) == null ? void 0 : _a.text) || q.text;
+    if (!currentText || String(currentText).trim() === "") {
+      q.content = q.content || {};
+      q.content.text = "(Soru metni belirtilmedi)";
+    } else if (!q.content) {
+      q.content = { text: String(currentText) };
     }
     if (!q.type || !VALID_TYPES.has(q.type)) {
-      return { valid: false, isExamAppSource: true };
+      q.type = "single_choice";
     }
-    if (q.type !== "flashcard" && q.type !== "reading" && q.type !== "topic_review" && (!q.answer || typeof q.answer !== "object")) {
-      return { valid: false, isExamAppSource: true };
+    if (q.type !== "flashcard" && q.type !== "reading" && q.type !== "topic_review") {
+      if (!q.answer || typeof q.answer !== "object") {
+        q.answer = { choices: [], correctChoice: "" };
+      }
     }
   }
   return { valid: true, isExamAppSource: true };
@@ -1035,7 +1053,8 @@ var ExamAppGistSyncSettingTab = class extends import_obsidian5.PluginSettingTab 
 
 // src/gistSync.ts
 var import_obsidian6 = require("obsidian");
-var GIST_FILENAME2 = "exam_app_backup.json";
+var BACKUP_FILENAME2 = "exam_app_backup.json";
+var SOURCES_FILENAME2 = "exam_app_sources.json";
 var GITHUB_API_BASE2 = "https://api.github.com";
 async function ensureGistId(settings) {
   if (!settings.githubToken) {
@@ -1053,13 +1072,30 @@ async function ensureGistId(settings) {
   settings.gistId = createdId;
   return createdId;
 }
+async function getFileContent(fileObj, token) {
+  if (!fileObj) return null;
+  let contentStr = fileObj.content;
+  if (fileObj.truncated && fileObj.raw_url) {
+    const rawResponse = await (0, import_obsidian6.requestUrl)({
+      url: fileObj.raw_url,
+      headers: {
+        "Authorization": `Bearer ${token.trim()}`
+      }
+    });
+    if (rawResponse.status === 200) {
+      contentStr = rawResponse.text;
+    }
+  }
+  return contentStr && contentStr.trim().length > 0 ? contentStr : null;
+}
 async function fetchGistData(settings) {
   const gistId = await ensureGistId(settings);
+  const token = settings.githubToken.trim();
   const reqParams = {
     url: `${GITHUB_API_BASE2}/gists/${gistId}`,
     method: "GET",
     headers: {
-      "Authorization": `Bearer ${settings.githubToken.trim()}`,
+      "Authorization": `Bearer ${token}`,
       "Accept": "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28"
     }
@@ -1069,55 +1105,73 @@ async function fetchGistData(settings) {
     throw new Error(`GitHub Gist okuma hatas\u0131: ${response.status}`);
   }
   const gist = response.json;
-  const file = gist.files && gist.files[GIST_FILENAME2];
-  if (file) {
-    let contentStr = file.content;
-    if (file.truncated && file.raw_url) {
-      const rawResponse = await (0, import_obsidian6.requestUrl)({
-        url: file.raw_url,
-        headers: {
-          "Authorization": `Bearer ${settings.githubToken.trim()}`
-        }
-      });
-      if (rawResponse.status === 200) {
-        contentStr = rawResponse.text;
-      }
-    }
-    if (contentStr && contentStr.trim().length > 0) {
-      return JSON.parse(contentStr);
-    }
+  const files = gist.files || {};
+  const backupContent = await getFileContent(files[BACKUP_FILENAME2], token);
+  const sourcesContent = await getFileContent(files[SOURCES_FILENAME2], token);
+  const backupJson = backupContent ? JSON.parse(backupContent) : null;
+  const sourcesJson = sourcesContent ? JSON.parse(sourcesContent) : null;
+  if (!backupJson && !sourcesJson) {
+    return {
+      version: 3,
+      lastUpdated: Date.now(),
+      sources: [],
+      folders: [],
+      deletedSourceIds: [],
+      deletedFolderIds: [],
+      stats: {},
+      totalStats: {},
+      recentTests: [],
+      settings: {}
+    };
   }
-  return {
-    version: 3,
-    lastUpdated: Date.now(),
-    sources: [],
-    folders: [],
-    deletedSourceIds: [],
-    deletedFolderIds: [],
-    stats: {},
-    totalStats: {},
-    recentTests: [],
-    settings: {}
-  };
+  const payload = backupJson ? { ...backupJson } : {};
+  const inlineSources = Array.isArray(backupJson == null ? void 0 : backupJson.sources) ? backupJson.sources : [];
+  const splitSources = Array.isArray(sourcesJson == null ? void 0 : sourcesJson.sources) ? sourcesJson.sources : null;
+  let activeSources = [];
+  if (!splitSources) {
+    activeSources = inlineSources;
+  } else {
+    const inlineAt = (backupJson == null ? void 0 : backupJson.lastUpdated) || 0;
+    const splitAt = (sourcesJson == null ? void 0 : sourcesJson.lastUpdated) || 0;
+    activeSources = inlineSources.length > 0 && inlineAt > splitAt ? inlineSources : splitSources;
+  }
+  payload.sources = activeSources;
+  payload.lastUpdated = Math.max((backupJson == null ? void 0 : backupJson.lastUpdated) || 0, (sourcesJson == null ? void 0 : sourcesJson.lastUpdated) || 0);
+  return payload;
 }
 async function pushGistData(settings, payload) {
   const gistId = await ensureGistId(settings);
+  const token = settings.githubToken.trim();
+  const now = Date.now();
+  const backupPayload = {
+    ...payload,
+    sources: [],
+    lastUpdated: now
+  };
+  const sourcesPayload = {
+    sources: payload.sources || [],
+    lastUpdated: now
+  };
+  const filesToPatch = {
+    [BACKUP_FILENAME2]: {
+      content: JSON.stringify(backupPayload, null, 2)
+    },
+    [SOURCES_FILENAME2]: {
+      content: JSON.stringify(sourcesPayload, null, 2)
+    }
+  };
   const reqParams = {
     url: `${GITHUB_API_BASE2}/gists/${gistId}`,
     method: "PATCH",
     headers: {
-      "Authorization": `Bearer ${settings.githubToken.trim()}`,
+      "Authorization": `Bearer ${token}`,
       "Accept": "application/vnd.github+json",
       "Content-Type": "application/json",
       "X-GitHub-Api-Version": "2022-11-28"
     },
     body: JSON.stringify({
       description: "Exam App - User Study & Resource Data Sync (via Obsidian)",
-      files: {
-        [GIST_FILENAME2]: {
-          content: JSON.stringify(payload, null, 2)
-        }
-      }
+      files: filesToPatch
     })
   };
   const response = await (0, import_obsidian6.requestUrl)(reqParams);
@@ -1129,9 +1183,13 @@ async function pushGistData(settings, payload) {
 // src/dataMerger.ts
 function mergeSyncData(localSources, remotePayload) {
   let hasLocalChanges = false;
+  const activeSourceIds = /* @__PURE__ */ new Set([
+    ...((remotePayload == null ? void 0 : remotePayload.sources) || []).map((s) => s == null ? void 0 : s.id).filter(Boolean),
+    ...(localSources || []).map((s) => s == null ? void 0 : s.id).filter(Boolean)
+  ]);
   const mergedDeletedSourceIds = Array.from(/* @__PURE__ */ new Set([
     ...(remotePayload == null ? void 0 : remotePayload.deletedSourceIds) || []
-  ]));
+  ])).filter((id) => !activeSourceIds.has(id));
   const mergedDeletedFolderIds = Array.from(/* @__PURE__ */ new Set([
     ...(remotePayload == null ? void 0 : remotePayload.deletedFolderIds) || []
   ]));
