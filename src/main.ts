@@ -87,10 +87,7 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 			// 1. Fetch remote Gist data (auto-detects/creates Gist ID if needed)
 			const remoteData = await fetchGistData(this.settings);
 			
-			// Save settings if gistId was auto-resolved
-			await this.saveSettings();
-
-			// 2. Scan local JSON files in the specified folder
+			// 2. Scan local JSON files in the specified folder (Backup subfolder is excluded!)
 			const localSources = await scanLocalSources(this.app, this.settings.localFolderPath);
 
 			// 3. Merge data using ExamApp logic ("Güçlü Zayıfı Ezer")
@@ -105,11 +102,18 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 			// 6. Generate/update Markdown summary dashboard (00_ExamApp_Overview.md)
 			await generateMarkdownSummary(this.app, this.settings.localFolderPath, mergedData.sources, 'Success');
 
+			this.settings.lastSyncTimestamp = Date.now();
+			this.settings.lastSyncMode = 'Çift Yönlü (Full Sync)';
+			this.settings.lastSyncStatus = 'Başarılı';
+			await this.saveSettings();
+
 			if (this.settings.showNotifications) {
 				new Notice(`[ExamApp Sync] Senkronizasyon tamamlandı (${mergedData.sources.length} havuz senkronize edildi).`);
 			}
 		} catch (error: any) {
 			console.error('[ExamApp Sync] Hata:', error);
+			this.settings.lastSyncStatus = 'Hata';
+			await this.saveSettings();
 			if (this.settings.showNotifications) {
 				new Notice(`[ExamApp Sync] Senkronizasyon hatası: ${error.message}`);
 			}
@@ -127,9 +131,17 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 			const sources = remoteData?.sources || [];
 			await writeLocalSources(this.app, this.settings.localFolderPath, sources);
 			await generateMarkdownSummary(this.app, this.settings.localFolderPath, sources, 'Pull Success');
+			
+			this.settings.lastSyncTimestamp = Date.now();
+			this.settings.lastSyncMode = 'Gist\'ten Çek (Pull Only)';
+			this.settings.lastSyncStatus = 'Başarılı';
+			await this.saveSettings();
+
 			new Notice(`[ExamApp Sync] Gist'ten ${sources.length} havuz başarıyla çekildi.`);
 		} catch (error: any) {
 			console.error('[ExamApp Pull Error]', error);
+			this.settings.lastSyncStatus = 'Hata';
+			await this.saveSettings();
 			new Notice(`[ExamApp Sync] Çekme hatası: ${error.message}`);
 		}
 	}
@@ -150,12 +162,21 @@ export default class ExamAppGistSyncPlugin extends Plugin {
 			};
 			await pushGistData(this.settings, payload);
 			await generateMarkdownSummary(this.app, this.settings.localFolderPath, localSources, 'Push Success');
+			
+			this.settings.lastSyncTimestamp = Date.now();
+			this.settings.lastSyncMode = 'Gist\'e Gönder (Push Only)';
+			this.settings.lastSyncStatus = 'Başarılı';
+			await this.saveSettings();
+
 			new Notice(`[ExamApp Sync] Yereldeki ${localSources.length} havuz Gist'e gönderildi.`);
 		} catch (error: any) {
 			console.error('[ExamApp Push Error]', error);
+			this.settings.lastSyncStatus = 'Hata';
+			await this.saveSettings();
 			new Notice(`[ExamApp Sync] Gönderme hatası: ${error.message}`);
 		}
 	}
+
 
 
 	async loadSettings() {

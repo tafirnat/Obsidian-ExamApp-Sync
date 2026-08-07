@@ -191,7 +191,21 @@ function validateExamSchema(data) {
 }
 
 // src/fileScanner.ts
+async function ensureSubfolders(app, folderPath) {
+  const subfolders = ["", "/Archived", "/Backup", "/Deleted"];
+  for (const sub of subfolders) {
+    const path = `${folderPath}${sub}`;
+    const folder = app.vault.getAbstractFileByPath(path);
+    if (!folder) {
+      try {
+        await app.vault.createFolder(path);
+      } catch (e) {
+      }
+    }
+  }
+}
 async function scanLocalSources(app, folderPath) {
+  await ensureSubfolders(app, folderPath);
   const targetFolder = app.vault.getAbstractFileByPath(folderPath);
   if (!targetFolder || !(targetFolder instanceof import_obsidian2.TFolder)) {
     console.warn(`[ExamApp Sync] Hedef klas\xF6r bulunamad\u0131: ${folderPath}`);
@@ -218,18 +232,17 @@ async function scanLocalSources(app, folderPath) {
   return validSources;
 }
 async function writeLocalSources(app, folderPath, sources) {
-  const targetFolder = app.vault.getAbstractFileByPath(folderPath);
-  if (!targetFolder || !(targetFolder instanceof import_obsidian2.TFolder)) {
-    try {
-      await app.vault.createFolder(folderPath);
-    } catch (e) {
-      console.error(`[ExamApp Sync] Hedef klas\xF6r olu\u015Fturulamad\u0131: ${folderPath}`, e);
-      return;
-    }
-  }
+  await ensureSubfolders(app, folderPath);
   for (const source of sources) {
     const safeName = (source.name || source.id || "Unknown_Source").replace(/[\\/:*?"<>|]/g, "_");
-    const filePath = `${folderPath}/${safeName}_${source.id.substring(0, 8)}.json`;
+    const shortId = (source.id || "00000000").substring(0, 8);
+    let targetSubfolder = "";
+    if (source.isDeleted) {
+      targetSubfolder = "/Deleted";
+    } else if (source.isArchived) {
+      targetSubfolder = "/Archived";
+    }
+    const filePath = `${folderPath}${targetSubfolder}/${safeName}_${shortId}.json`;
     const content = JSON.stringify(source, null, 2);
     const existingFile = app.vault.getAbstractFileByPath(filePath);
     if (existingFile instanceof import_obsidian2.TFile) {
@@ -752,13 +765,16 @@ async function checkForUpdates(plugin, isManual = false) {
 var DEFAULT_SETTINGS = {
   githubToken: "",
   gistId: "",
-  localFolderPath: "ExamApp Sync",
+  localFolderPath: "50_Projects/ExamApp/datasets",
   githubUsername: "",
   autoSyncOnStartup: false,
   showNotifications: true,
   autoCheckUpdates: true,
   lastUpdateCheckTimestamp: 0,
-  autoInstallUpdates: true
+  autoInstallUpdates: true,
+  lastSyncTimestamp: 0,
+  lastSyncMode: "None",
+  lastSyncStatus: "None"
 };
 var ICONS = {
   github: `<svg height="16" width="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align: text-bottom; margin-right: 6px;"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"></path></svg>`,
@@ -1266,11 +1282,26 @@ var ExamAppSyncModal = class extends import_obsidian7.Modal {
     infoCard.style.lineHeight = "1.6";
     const username = this.plugin.settings.githubUsername ? `@${this.plugin.settings.githubUsername}` : "Oturum A\xE7\u0131lmad\u0131";
     const gistId = this.plugin.settings.gistId ? this.plugin.settings.gistId : "Ba\u011Fl\u0131 De\u011Fil";
-    const folderPath = this.plugin.settings.localFolderPath || "ExamApp Sync";
+    const folderPath = this.plugin.settings.localFolderPath || "50_Projects/ExamApp/datasets";
+    let lastSyncDateStr = "Hen\xFCz Yap\u0131lmad\u0131";
+    if (this.plugin.settings.lastSyncTimestamp) {
+      try {
+        lastSyncDateStr = new Date(this.plugin.settings.lastSyncTimestamp).toISOString().replace("T", " ").substring(0, 19);
+      } catch (e) {
+        lastSyncDateStr = String(this.plugin.settings.lastSyncTimestamp);
+      }
+    }
+    const lastSyncModeStr = this.plugin.settings.lastSyncMode || "Belirtilmedi";
+    const lastSyncStatusStr = this.plugin.settings.lastSyncStatus || "Belirtilmedi";
     infoCard.innerHTML = `
 			<div><strong>Hesap:</strong> <span style="color: var(--text-accent); font-weight: 600;">${username}</span></div>
 			<div><strong>Gist ID:</strong> <code>${gistId}</code></div>
 			<div><strong>Senkron Klas\xF6r\xFC:</strong> <code>${folderPath}</code></div>
+			<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--background-modifier-border); display: flex; gap: 12px; font-size: 0.9em; opacity: 0.9;">
+				<div><strong>Son Senkronizasyon:</strong> <code>${lastSyncDateStr}</code></div>
+				<div><strong>Tip:</strong> <code>${lastSyncModeStr}</code></div>
+				<div><strong>Durum:</strong> <span style="color: var(--text-success); font-weight: bold;">${lastSyncStatusStr}</span></div>
+			</div>
 		`;
     const actionsLabel = contentEl.createEl("h4", { text: "Senkronizasyon Y\xF6ntemi Se\xE7in" });
     actionsLabel.style.marginBottom = "12px";
@@ -1279,6 +1310,7 @@ var ExamAppSyncModal = class extends import_obsidian7.Modal {
     btnGroup.style.flexDirection = "column";
     btnGroup.style.gap = "12px";
     const fullSyncBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    fullSyncBtn.title = "Gist ve Vault verilerini tarih ve i\xE7erik durumuna g\xF6re ak\u0131ll\u0131ca birle\u015Ftirir";
     fullSyncBtn.style.width = "100%";
     fullSyncBtn.style.justifyContent = "flex-start";
     fullSyncBtn.style.padding = "10px 14px";
@@ -1294,6 +1326,7 @@ var ExamAppSyncModal = class extends import_obsidian7.Modal {
       await this.plugin.syncWithGist();
     };
     const pullBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    pullBtn.title = "Gist'teki soru havuzlar\u0131n\u0131 okur ve Vault klas\xF6rlerine (Archived/Deleted) aktar\u0131r";
     pullBtn.style.width = "100%";
     pullBtn.style.justifyContent = "flex-start";
     pullBtn.style.padding = "10px 14px";
@@ -1308,6 +1341,7 @@ var ExamAppSyncModal = class extends import_obsidian7.Modal {
       await this.plugin.pullFromGist();
     };
     const pushBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    pushBtn.title = "Vault'taki aktif soru havuzlar\u0131n\u0131 (Backup haric) Gist'e y\xFCkler";
     pushBtn.style.width = "100%";
     pushBtn.style.justifyContent = "flex-start";
     pushBtn.style.padding = "10px 14px";
@@ -1381,17 +1415,22 @@ var ExamAppGistSyncPlugin = class extends import_obsidian8.Plugin {
     }
     try {
       const remoteData = await fetchGistData(this.settings);
-      await this.saveSettings();
       const localSources = await scanLocalSources(this.app, this.settings.localFolderPath);
       const mergedData = mergeSyncData(localSources, remoteData);
       await pushGistData(this.settings, mergedData);
       await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
       await generateMarkdownSummary(this.app, this.settings.localFolderPath, mergedData.sources, "Success");
+      this.settings.lastSyncTimestamp = Date.now();
+      this.settings.lastSyncMode = "\xC7ift Y\xF6nl\xFC (Full Sync)";
+      this.settings.lastSyncStatus = "Ba\u015Far\u0131l\u0131";
+      await this.saveSettings();
       if (this.settings.showNotifications) {
         new import_obsidian8.Notice(`[ExamApp Sync] Senkronizasyon tamamland\u0131 (${mergedData.sources.length} havuz senkronize edildi).`);
       }
     } catch (error) {
       console.error("[ExamApp Sync] Hata:", error);
+      this.settings.lastSyncStatus = "Hata";
+      await this.saveSettings();
       if (this.settings.showNotifications) {
         new import_obsidian8.Notice(`[ExamApp Sync] Senkronizasyon hatas\u0131: ${error.message}`);
       }
@@ -1408,9 +1447,15 @@ var ExamAppGistSyncPlugin = class extends import_obsidian8.Plugin {
       const sources = (remoteData == null ? void 0 : remoteData.sources) || [];
       await writeLocalSources(this.app, this.settings.localFolderPath, sources);
       await generateMarkdownSummary(this.app, this.settings.localFolderPath, sources, "Pull Success");
+      this.settings.lastSyncTimestamp = Date.now();
+      this.settings.lastSyncMode = "Gist'ten \xC7ek (Pull Only)";
+      this.settings.lastSyncStatus = "Ba\u015Far\u0131l\u0131";
+      await this.saveSettings();
       new import_obsidian8.Notice(`[ExamApp Sync] Gist'ten ${sources.length} havuz ba\u015Far\u0131yla \xE7ekildi.`);
     } catch (error) {
       console.error("[ExamApp Pull Error]", error);
+      this.settings.lastSyncStatus = "Hata";
+      await this.saveSettings();
       new import_obsidian8.Notice(`[ExamApp Sync] \xC7ekme hatas\u0131: ${error.message}`);
     }
   }
@@ -1430,9 +1475,15 @@ var ExamAppGistSyncPlugin = class extends import_obsidian8.Plugin {
       };
       await pushGistData(this.settings, payload);
       await generateMarkdownSummary(this.app, this.settings.localFolderPath, localSources, "Push Success");
+      this.settings.lastSyncTimestamp = Date.now();
+      this.settings.lastSyncMode = "Gist'e G\xF6nder (Push Only)";
+      this.settings.lastSyncStatus = "Ba\u015Far\u0131l\u0131";
+      await this.saveSettings();
       new import_obsidian8.Notice(`[ExamApp Sync] Yereldeki ${localSources.length} havuz Gist'e g\xF6nderildi.`);
     } catch (error) {
       console.error("[ExamApp Push Error]", error);
+      this.settings.lastSyncStatus = "Hata";
+      await this.saveSettings();
       new import_obsidian8.Notice(`[ExamApp Sync] G\xF6nderme hatas\u0131: ${error.message}`);
     }
   }

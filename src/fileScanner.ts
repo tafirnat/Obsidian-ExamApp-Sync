@@ -1,7 +1,23 @@
 import { App, TFile, TFolder } from 'obsidian';
 import { validateExamSchema } from './schemaValidator';
 
+async function ensureSubfolders(app: App, folderPath: string): Promise<void> {
+    const subfolders = ['', '/Archived', '/Backup', '/Deleted'];
+    for (const sub of subfolders) {
+        const path = `${folderPath}${sub}`;
+        const folder = app.vault.getAbstractFileByPath(path);
+        if (!folder) {
+            try {
+                await app.vault.createFolder(path);
+            } catch (e) {
+                // Ignore if created concurrently
+            }
+        }
+    }
+}
+
 export async function scanLocalSources(app: App, folderPath: string): Promise<any[]> {
+    await ensureSubfolders(app, folderPath);
     const targetFolder = app.vault.getAbstractFileByPath(folderPath);
     
     if (!targetFolder || !(targetFolder instanceof TFolder)) {
@@ -11,6 +27,7 @@ export async function scanLocalSources(app: App, folderPath: string): Promise<an
 
     const validSources: any[] = [];
 
+    // Scan active .json files directly under folderPath (Backup subfolder is strictly local and EXCLUDED from Gist sync)
     for (const child of targetFolder.children) {
         if (child instanceof TFile && child.extension === 'json') {
             try {
@@ -25,7 +42,6 @@ export async function scanLocalSources(app: App, folderPath: string): Promise<an
                 } else if (isExamAppSource && !valid) {
                     console.warn(`[ExamApp Sync] Dosya (${child.path}) ExamApp yapısına benziyor fakat şema hatası içeriyor. Atlanıyor.`);
                 }
-                // If not an ExamApp source at all, just ignore silently.
             } catch (err) {
                 console.error(`[ExamApp Sync] JSON okuma hatası (${child.path}):`, err);
             }
@@ -36,22 +52,20 @@ export async function scanLocalSources(app: App, folderPath: string): Promise<an
 }
 
 export async function writeLocalSources(app: App, folderPath: string, sources: any[]): Promise<void> {
-    const targetFolder = app.vault.getAbstractFileByPath(folderPath);
-    
-    if (!targetFolder || !(targetFolder instanceof TFolder)) {
-        try {
-            await app.vault.createFolder(folderPath);
-        } catch (e) {
-            console.error(`[ExamApp Sync] Hedef klasör oluşturulamadı: ${folderPath}`, e);
-            return;
-        }
-    }
+    await ensureSubfolders(app, folderPath);
 
     for (const source of sources) {
-        // Safe filename
         const safeName = (source.name || source.id || 'Unknown_Source').replace(/[\\/:*?"<>|]/g, '_');
-        const filePath = `${folderPath}/${safeName}_${source.id.substring(0, 8)}.json`;
+        const shortId = (source.id || '00000000').substring(0, 8);
         
+        let targetSubfolder = '';
+        if (source.isDeleted) {
+            targetSubfolder = '/Deleted';
+        } else if (source.isArchived) {
+            targetSubfolder = '/Archived';
+        }
+
+        const filePath = `${folderPath}${targetSubfolder}/${safeName}_${shortId}.json`;
         const content = JSON.stringify(source, null, 2);
         
         const existingFile = app.vault.getAbstractFileByPath(filePath);
@@ -74,7 +88,6 @@ export async function cleanupOldDirectory(app: App, oldFolderPath: string, newFo
     }
 
     let deletedCount = 0;
-    // Collect children to avoid mutation issues during iteration
     const children = [...oldFolder.children];
 
     for (const child of children) {
@@ -103,7 +116,6 @@ export async function cleanupOldDirectory(app: App, oldFolderPath: string, newFo
         }
     }
 
-    // Delete directory if empty
     if (oldFolder.children.length === 0) {
         try {
             await app.vault.delete(oldFolder);
@@ -114,4 +126,5 @@ export async function cleanupOldDirectory(app: App, oldFolderPath: string, newFo
 
     return deletedCount;
 }
+
 

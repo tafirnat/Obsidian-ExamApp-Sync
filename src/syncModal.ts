@@ -29,12 +29,29 @@ export class ExamAppSyncModal extends Modal {
 
 		const username = this.plugin.settings.githubUsername ? `@${this.plugin.settings.githubUsername}` : 'Oturum Açılmadı';
 		const gistId = this.plugin.settings.gistId ? this.plugin.settings.gistId : 'Bağlı Değil';
-		const folderPath = this.plugin.settings.localFolderPath || 'ExamApp Sync';
+		const folderPath = this.plugin.settings.localFolderPath || '50_Projects/ExamApp/datasets';
+
+		let lastSyncDateStr = 'Henüz Yapılmadı';
+		if (this.plugin.settings.lastSyncTimestamp) {
+			try {
+				lastSyncDateStr = new Date(this.plugin.settings.lastSyncTimestamp).toISOString().replace('T', ' ').substring(0, 19);
+			} catch (e) {
+				lastSyncDateStr = String(this.plugin.settings.lastSyncTimestamp);
+			}
+		}
+
+		const lastSyncModeStr = this.plugin.settings.lastSyncMode || 'Belirtilmedi';
+		const lastSyncStatusStr = this.plugin.settings.lastSyncStatus || 'Belirtilmedi';
 
 		infoCard.innerHTML = `
 			<div><strong>Hesap:</strong> <span style="color: var(--text-accent); font-weight: 600;">${username}</span></div>
 			<div><strong>Gist ID:</strong> <code>${gistId}</code></div>
 			<div><strong>Senkron Klasörü:</strong> <code>${folderPath}</code></div>
+			<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--background-modifier-border); display: flex; gap: 12px; font-size: 0.9em; opacity: 0.9;">
+				<div><strong>Son Senkronizasyon:</strong> <code>${lastSyncDateStr}</code></div>
+				<div><strong>Tip:</strong> <code>${lastSyncModeStr}</code></div>
+				<div><strong>Durum:</strong> <span style="color: var(--text-success); font-weight: bold;">${lastSyncStatusStr}</span></div>
+			</div>
 		`;
 
 		const actionsLabel = contentEl.createEl('h4', { text: 'Senkronizasyon Yöntemi Seçin' });
@@ -47,6 +64,7 @@ export class ExamAppSyncModal extends Modal {
 
 		// 1. Full Dual Sync Button
 		const fullSyncBtn = btnGroup.createEl('button', { cls: 'examapp-sync-btn' });
+		fullSyncBtn.title = 'Gist ve Vault verilerini tarih ve içerik durumuna göre akıllıca birleştirir';
 		fullSyncBtn.style.width = '100%';
 		fullSyncBtn.style.justifyContent = 'flex-start';
 		fullSyncBtn.style.padding = '10px 14px';
@@ -64,6 +82,7 @@ export class ExamAppSyncModal extends Modal {
 
 		// 2. Pull Only Button
 		const pullBtn = btnGroup.createEl('button', { cls: 'examapp-sync-btn' });
+		pullBtn.title = 'Gist\'teki soru havuzlarını okur ve Vault klasörlerine (Archived/Deleted) aktarır';
 		pullBtn.style.width = '100%';
 		pullBtn.style.justifyContent = 'flex-start';
 		pullBtn.style.padding = '10px 14px';
@@ -80,6 +99,7 @@ export class ExamAppSyncModal extends Modal {
 
 		// 3. Push Only Button
 		const pushBtn = btnGroup.createEl('button', { cls: 'examapp-sync-btn' });
+		pushBtn.title = 'Vault\'taki aktif soru havuzlarını (Backup haric) Gist\'e yükler';
 		pushBtn.style.width = '100%';
 		pushBtn.style.justifyContent = 'flex-start';
 		pushBtn.style.padding = '10px 14px';
@@ -100,3 +120,4 @@ export class ExamAppSyncModal extends Modal {
 		contentEl.empty();
 	}
 }
+
