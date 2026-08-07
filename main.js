@@ -25,7 +25,7 @@ __export(main_exports, {
   default: () => ExamAppGistSyncPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 
 // src/settings.ts
 var import_obsidian5 = require("obsidian");
@@ -1242,16 +1242,102 @@ function mergeSyncData(localSources, remotePayload) {
   };
 }
 
+// src/syncModal.ts
+var import_obsidian7 = require("obsidian");
+var ExamAppSyncModal = class extends import_obsidian7.Modal {
+  constructor(app, plugin) {
+    super(app);
+    this.plugin = plugin;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.style.padding = "20px";
+    const title = contentEl.createEl("h2", { text: "ExamApp Senkronizasyon Paneli" });
+    title.style.marginTop = "0";
+    title.style.marginBottom = "16px";
+    const infoCard = contentEl.createDiv();
+    infoCard.style.padding = "12px 16px";
+    infoCard.style.borderRadius = "8px";
+    infoCard.style.backgroundColor = "var(--background-secondary)";
+    infoCard.style.border = "1px solid var(--background-modifier-border)";
+    infoCard.style.marginBottom = "20px";
+    infoCard.style.fontSize = "0.92em";
+    infoCard.style.lineHeight = "1.6";
+    const username = this.plugin.settings.githubUsername ? `@${this.plugin.settings.githubUsername}` : "Oturum A\xE7\u0131lmad\u0131";
+    const gistId = this.plugin.settings.gistId ? this.plugin.settings.gistId : "Ba\u011Fl\u0131 De\u011Fil";
+    const folderPath = this.plugin.settings.localFolderPath || "ExamApp Sync";
+    infoCard.innerHTML = `
+			<div><strong>Hesap:</strong> <span style="color: var(--text-accent); font-weight: 600;">${username}</span></div>
+			<div><strong>Gist ID:</strong> <code>${gistId}</code></div>
+			<div><strong>Senkron Klas\xF6r\xFC:</strong> <code>${folderPath}</code></div>
+		`;
+    const actionsLabel = contentEl.createEl("h4", { text: "Senkronizasyon Y\xF6ntemi Se\xE7in" });
+    actionsLabel.style.marginBottom = "12px";
+    const btnGroup = contentEl.createDiv();
+    btnGroup.style.display = "flex";
+    btnGroup.style.flexDirection = "column";
+    btnGroup.style.gap = "12px";
+    const fullSyncBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    fullSyncBtn.style.width = "100%";
+    fullSyncBtn.style.justifyContent = "flex-start";
+    fullSyncBtn.style.padding = "10px 14px";
+    fullSyncBtn.innerHTML = `
+			<span class="examapp-sync-icon-span">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M2.5 16l1.2 1.3A10 10 0 0 0 22 12.5"/></svg>
+			</span>
+			<span style="font-weight: 600;">\xC7ift Y\xF6nl\xFC Senkronize Et (Full Sync)</span>
+			<span class="examapp-sync-badge-span" style="margin-left: auto;">Tavsiye Edilen</span>
+		`;
+    fullSyncBtn.onclick = async () => {
+      this.close();
+      await this.plugin.syncWithGist();
+    };
+    const pullBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    pullBtn.style.width = "100%";
+    pullBtn.style.justifyContent = "flex-start";
+    pullBtn.style.padding = "10px 14px";
+    pullBtn.innerHTML = `
+			<span class="examapp-sync-icon-span">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+			</span>
+			<span style="font-weight: 600;">Gist'ten Yerel Vault'a \xC7ek (Pull Only)</span>
+		`;
+    pullBtn.onclick = async () => {
+      this.close();
+      await this.plugin.pullFromGist();
+    };
+    const pushBtn = btnGroup.createEl("button", { cls: "examapp-sync-btn" });
+    pushBtn.style.width = "100%";
+    pushBtn.style.justifyContent = "flex-start";
+    pushBtn.style.padding = "10px 14px";
+    pushBtn.innerHTML = `
+			<span class="examapp-sync-icon-span">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+			</span>
+			<span style="font-weight: 600;">Yerel Vault'tan Gist'e G\xF6nder (Push Only)</span>
+		`;
+    pushBtn.onclick = async () => {
+      this.close();
+      await this.plugin.pushToGist();
+    };
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+
 // src/main.ts
 var INFINITY_SYNC_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M 12,12 C 8.5,16.5 4,17 2.5,14.5 C 1,12 2.5,8 6.5,8.5 C 10.5,9 13.5,14.5 17.5,15.5 C 21.5,16.5 23,12.5 21.5,10 C 20,7.5 16,7.5 12,12"/><path d="M 17,6.5 L 21.5,10 L 21,5.5"/><path d="M 7,17.5 L 2.5,14.5 L 3,19"/></svg>`;
-var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
+var ExamAppGistSyncPlugin = class extends import_obsidian8.Plugin {
   async onload() {
     await this.loadSettings();
     this.injectStyles();
-    (0, import_obsidian7.addIcon)("examapp-infinity-sync", INFINITY_SYNC_ICON_SVG);
+    (0, import_obsidian8.addIcon)("examapp-infinity-sync", INFINITY_SYNC_ICON_SVG);
     this.addSettingTab(new ExamAppGistSyncSettingTab(this.app, this));
-    const ribbonIconEl = this.addRibbonIcon("examapp-infinity-sync", "ExamApp Sync", async () => {
-      await this.syncWithGist();
+    const ribbonIconEl = this.addRibbonIcon("examapp-infinity-sync", "ExamApp Sync", () => {
+      new ExamAppSyncModal(this.app, this).open();
     });
     if (ribbonIconEl) {
       ribbonIconEl.addClass("examapp-sync-ribbon-class");
@@ -1261,6 +1347,13 @@ var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
       name: "Sync with ExamApp Gist",
       callback: async () => {
         await this.syncWithGist();
+      }
+    });
+    this.addCommand({
+      id: "open-examapp-sync-modal",
+      name: "Open ExamApp Sync Panel Modal",
+      callback: () => {
+        new ExamAppSyncModal(this.app, this).open();
       }
     });
     if (this.settings.autoSyncOnStartup && this.settings.githubToken) {
@@ -1279,12 +1372,12 @@ var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
   async syncWithGist(isAutoSync = false) {
     if (!this.settings.githubToken) {
       if (!isAutoSync && this.settings.showNotifications) {
-        new import_obsidian7.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan GitHub hesab\u0131n\u0131zla oturum a\xE7\u0131n.");
+        new import_obsidian8.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan GitHub hesab\u0131n\u0131zla oturum a\xE7\u0131n.");
       }
       return;
     }
     if (this.settings.showNotifications) {
-      new import_obsidian7.Notice("[ExamApp Sync] Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
+      new import_obsidian8.Notice("[ExamApp Sync] Senkronizasyon ba\u015Flat\u0131l\u0131yor...");
     }
     try {
       const remoteData = await fetchGistData(this.settings);
@@ -1295,13 +1388,52 @@ var ExamAppGistSyncPlugin = class extends import_obsidian7.Plugin {
       await writeLocalSources(this.app, this.settings.localFolderPath, mergedData.sources);
       await generateMarkdownSummary(this.app, this.settings.localFolderPath, mergedData.sources, "Success");
       if (this.settings.showNotifications) {
-        new import_obsidian7.Notice(`[ExamApp Sync] Senkronizasyon tamamland\u0131 (${mergedData.sources.length} havuz senkronize edildi).`);
+        new import_obsidian8.Notice(`[ExamApp Sync] Senkronizasyon tamamland\u0131 (${mergedData.sources.length} havuz senkronize edildi).`);
       }
     } catch (error) {
       console.error("[ExamApp Sync] Hata:", error);
       if (this.settings.showNotifications) {
-        new import_obsidian7.Notice(`[ExamApp Sync] Senkronizasyon hatas\u0131: ${error.message}`);
+        new import_obsidian8.Notice(`[ExamApp Sync] Senkronizasyon hatas\u0131: ${error.message}`);
       }
+    }
+  }
+  async pullFromGist() {
+    if (!this.settings.githubToken) {
+      new import_obsidian8.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan oturum a\xE7\u0131n.");
+      return;
+    }
+    new import_obsidian8.Notice("[ExamApp Sync] Gist verileri \xE7ekiliyor...");
+    try {
+      const remoteData = await fetchGistData(this.settings);
+      const sources = (remoteData == null ? void 0 : remoteData.sources) || [];
+      await writeLocalSources(this.app, this.settings.localFolderPath, sources);
+      await generateMarkdownSummary(this.app, this.settings.localFolderPath, sources, "Pull Success");
+      new import_obsidian8.Notice(`[ExamApp Sync] Gist'ten ${sources.length} havuz ba\u015Far\u0131yla \xE7ekildi.`);
+    } catch (error) {
+      console.error("[ExamApp Pull Error]", error);
+      new import_obsidian8.Notice(`[ExamApp Sync] \xC7ekme hatas\u0131: ${error.message}`);
+    }
+  }
+  async pushToGist() {
+    if (!this.settings.githubToken) {
+      new import_obsidian8.Notice("[ExamApp Sync] L\xFCtfen \xF6nce eklenti ayarlar\u0131ndan oturum a\xE7\u0131n.");
+      return;
+    }
+    new import_obsidian8.Notice("[ExamApp Sync] Yerel veriler Gist'e g\xF6nderiliyor...");
+    try {
+      const localSources = await scanLocalSources(this.app, this.settings.localFolderPath);
+      const remoteData = await fetchGistData(this.settings);
+      const payload = {
+        ...remoteData,
+        sources: localSources,
+        lastUpdated: Date.now()
+      };
+      await pushGistData(this.settings, payload);
+      await generateMarkdownSummary(this.app, this.settings.localFolderPath, localSources, "Push Success");
+      new import_obsidian8.Notice(`[ExamApp Sync] Yereldeki ${localSources.length} havuz Gist'e g\xF6nderildi.`);
+    } catch (error) {
+      console.error("[ExamApp Push Error]", error);
+      new import_obsidian8.Notice(`[ExamApp Sync] G\xF6nderme hatas\u0131: ${error.message}`);
     }
   }
   async loadSettings() {
