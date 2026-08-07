@@ -1,10 +1,11 @@
 {
 	"id": "examapp-gist-sync",
 	"name": "ExamApp Gist Sync",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"minAppVersion": "1.0.0",
 	"description": "Syncs your Obsidian question pools with ExamApp via GitHub Gist.",
 	"author": "tafirnat",
 	"authorUrl": "https://github.com/tafirnat",
 	"isDesktopOnly": false
 }
+
