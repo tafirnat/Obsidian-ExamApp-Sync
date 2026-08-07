@@ -1272,39 +1272,22 @@ var ExamAppSyncModal = class extends import_obsidian7.Modal {
     const title = contentEl.createEl("h2", { text: "ExamApp Senkronizasyon Paneli" });
     title.style.marginTop = "0";
     title.style.marginBottom = "16px";
-    const infoCard = contentEl.createDiv();
-    infoCard.style.padding = "12px 16px";
-    infoCard.style.borderRadius = "8px";
-    infoCard.style.backgroundColor = "var(--background-secondary)";
-    infoCard.style.border = "1px solid var(--background-modifier-border)";
-    infoCard.style.marginBottom = "20px";
-    infoCard.style.fontSize = "0.92em";
-    infoCard.style.lineHeight = "1.6";
-    const username = this.plugin.settings.githubUsername ? `@${this.plugin.settings.githubUsername}` : "Oturum A\xE7\u0131lmad\u0131";
-    const gistId = this.plugin.settings.gistId ? this.plugin.settings.gistId : "Ba\u011Fl\u0131 De\u011Fil";
-    const folderPath = this.plugin.settings.localFolderPath || "50_Projects/ExamApp/datasets";
-    let lastSyncDateStr = "Hen\xFCz Yap\u0131lmad\u0131";
+    let lastSyncText = "Son g\xFCncelleme: Hen\xFCz yap\u0131lmad\u0131";
     if (this.plugin.settings.lastSyncTimestamp) {
       try {
-        lastSyncDateStr = new Date(this.plugin.settings.lastSyncTimestamp).toISOString().replace("T", " ").substring(0, 19);
+        const dateStr = new Date(this.plugin.settings.lastSyncTimestamp).toISOString().replace("T", " ").substring(0, 19);
+        const modeStr = this.plugin.settings.lastSyncMode || "";
+        lastSyncText = `Son g\xFCncelleme: ${dateStr}${modeStr ? ` (${modeStr})` : ""}`;
       } catch (e) {
-        lastSyncDateStr = String(this.plugin.settings.lastSyncTimestamp);
+        lastSyncText = `Son g\xFCncelleme: ${this.plugin.settings.lastSyncTimestamp}`;
       }
     }
-    const lastSyncModeStr = this.plugin.settings.lastSyncMode || "Belirtilmedi";
-    const lastSyncStatusStr = this.plugin.settings.lastSyncStatus || "Belirtilmedi";
-    infoCard.innerHTML = `
-			<div><strong>Hesap:</strong> <span style="color: var(--text-accent); font-weight: 600;">${username}</span></div>
-			<div><strong>Gist ID:</strong> <code>${gistId}</code></div>
-			<div><strong>Senkron Klas\xF6r\xFC:</strong> <code>${folderPath}</code></div>
-			<div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--background-modifier-border); display: flex; gap: 12px; font-size: 0.9em; opacity: 0.9;">
-				<div><strong>Son Senkronizasyon:</strong> <code>${lastSyncDateStr}</code></div>
-				<div><strong>Tip:</strong> <code>${lastSyncModeStr}</code></div>
-				<div><strong>Durum:</strong> <span style="color: var(--text-success); font-weight: bold;">${lastSyncStatusStr}</span></div>
-			</div>
-		`;
-    const actionsLabel = contentEl.createEl("h4", { text: "Senkronizasyon Y\xF6ntemi Se\xE7in" });
-    actionsLabel.style.marginBottom = "12px";
+    const subText = contentEl.createEl("p");
+    subText.style.color = "var(--text-muted)";
+    subText.style.fontSize = "0.88em";
+    subText.style.marginTop = "0";
+    subText.style.marginBottom = "18px";
+    subText.textContent = lastSyncText;
     const btnGroup = contentEl.createDiv();
     btnGroup.style.display = "flex";
     btnGroup.style.flexDirection = "column";
